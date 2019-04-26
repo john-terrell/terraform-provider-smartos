@@ -60,27 +60,28 @@ func resourceMachine() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
-			"cpu_shares": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-			},
 			/*
-				"cpu_type": &schema.Schema{
-					Type:     schema.TypeString,
+				"cpu_shares": &schema.Schema{
+					Type:     schema.TypeInt,
 					Optional: true,
-					ForceNew: true,
 				},
+					"cpu_type": &schema.Schema{
+						Type:     schema.TypeString,
+						Optional: true,
+						ForceNew: true,
+					},
 			*/
 			"customer_metadata": &schema.Schema{
 				Type:     schema.TypeMap,
 				Optional: true,
 			},
-			"delegate_dataset": &schema.Schema{
-				Type:     schema.TypeBool,
-				Optional: true,
-			},
-			// 'disks.*' - disk object array
 			/*
+				"delegate_dataset": &schema.Schema{
+					Type:     schema.TypeBool,
+					Optional: true,
+				},
+				// 'disks.*' - disk object array
+
 				"disk_driver": &schema.Schema{
 					Type:     schema.TypeString,
 					Optional: true,
@@ -90,17 +91,15 @@ func resourceMachine() *schema.Resource {
 					Type:     schema.TypeBool,
 					Optional: true,
 				},
-			*/
-			"dns_domain": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-			},
-			// "filesystems.*"
-			"firewall_enabled": &schema.Schema{
-				Type:     schema.TypeBool,
-				Optional: true,
-			},
-			/*
+				"dns_domain": &schema.Schema{
+					Type:     schema.TypeString,
+					Optional: true,
+				},
+				// "filesystems.*"
+				"firewall_enabled": &schema.Schema{
+					Type:     schema.TypeBool,
+					Optional: true,
+				},
 				"flexible_disk_size": &schema.Schema{
 					Type:     schema.TypeInt,
 					Optional: true,
@@ -109,44 +108,44 @@ func resourceMachine() *schema.Resource {
 					Type:     schema.TypeString,
 					Optional: true,
 				},
+				"hostname": &schema.Schema{
+					Type:     schema.TypeString,
+					Optional: true,
+				},
 			*/
-			"hostname": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-			},
 			"image_uuid": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
-			"internal_metadata": &schema.Schema{
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-			},
-			"internal_metadata_namespaces": &schema.Schema{
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-			},
-			"indestructible_delegated": &schema.Schema{
-				Type:     schema.TypeBool,
-				Optional: true,
-			},
-			"indestructible_zoneroot": &schema.Schema{
-				Type:     schema.TypeBool,
-				Optional: true,
-			},
-			"kernel_version": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-			},
 			/*
+				"internal_metadata": &schema.Schema{
+					Type:     schema.TypeList,
+					Optional: true,
+					Elem: &schema.Schema{
+						Type: schema.TypeString,
+					},
+				},
+				"internal_metadata_namespaces": &schema.Schema{
+					Type:     schema.TypeList,
+					Optional: true,
+					Elem: &schema.Schema{
+						Type: schema.TypeString,
+					},
+				},
+				"indestructible_delegated": &schema.Schema{
+					Type:     schema.TypeBool,
+					Optional: true,
+				},
+				"indestructible_zoneroot": &schema.Schema{
+					Type:     schema.TypeBool,
+					Optional: true,
+				},
+				"kernel_version": &schema.Schema{
+					Type:     schema.TypeString,
+					Optional: true,
+					ForceNew: true,
+				},
 				"limit_priv": &schema.Schema{
 					Type:     schema.TypeString,
 					Optional: true,
@@ -168,11 +167,11 @@ func resourceMachine() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
-			"max_swap": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-			},
 			/*
+				"max_swap": &schema.Schema{
+					Type:     schema.TypeInt,
+					Optional: true,
+				},
 				"mdata_exec_timeout": &schema.Schema{
 					Type:     schema.TypeInt,
 					Optional: true,
@@ -230,16 +229,16 @@ func resourceMachine() *schema.Resource {
 					Type:     schema.TypeString,
 					Optional: true,
 				},
+				"quota": &schema.Schema{
+					Type:     schema.TypeInt,
+					Optional: true,
+				},
+				"ram": &schema.Schema{
+					Type:     schema.TypeInt,
+					Optional: true,
+					ForceNew: true,
+				},
 			*/
-			"quota": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-			},
-			"ram": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-				ForceNew: true,
-			},
 			"resolvers": &schema.Schema{
 				Type:     schema.TypeList,
 				Optional: true,
@@ -349,10 +348,13 @@ func resourceMachineCreate(d *schema.ResourceData, m interface{}) error {
 	if err == nil {
 		var uuid *uuid.UUID
 		{
+			alias := d.Get("alias").(string)
+			brand := d.Get("brand").(string)
+
 			machine := Machine{
 				// Set the required items
-				Alias:     d.Get("alias").(string),
-				Brand:     d.Get("brand").(string),
+				Alias:     alias,
+				Brand:     brand,
 				ImageUUID: id,
 			}
 
@@ -365,6 +367,12 @@ func resourceMachineCreate(d *schema.ResourceData, m interface{}) error {
 				machine.CPUCap = cpuCap.(uint32)
 			}
 
+			customerMetaData := map[string]string{}
+			for k, v := range d.Get("customer_metadata").(map[string]interface{}) {
+				customerMetaData[k] = v.(string)
+			}
+			machine.CustomerMetadata = customerMetaData
+
 			if maxPhysicalMemory, ok := d.GetOk("max_physical_memory"); ok {
 				machine.MaxPhysicalMemory = uint32(maxPhysicalMemory.(int))
 			}
@@ -376,12 +384,6 @@ func resourceMachineCreate(d *schema.ResourceData, m interface{}) error {
 			for _, resolver := range d.Get("resolvers").([]interface{}) {
 				machine.Resolvers = append(machine.Resolvers, resolver.(string))
 			}
-
-			customerMetaData := map[string]string{}
-			for k, v := range d.Get("customer_metadata").(map[string]interface{}) {
-				customerMetaData[k] = v.(string)
-			}
-			machine.CustomerMetadata = customerMetaData
 
 			var err error
 			uuid, err = client.CreateMachine(&machine)
@@ -476,22 +478,32 @@ func getNetworkInterfaces(d interface{}) ([]NetworkInterface, error) {
 	for _, nid := range networkInterfaceDefinitions {
 		networkInterfaceDefinition := nid.(map[string]interface{})
 
-		var ips []string
-		for _, ip := range networkInterfaceDefinition["ips"].([]interface{}) {
-			ips = append(ips, ip.(string))
-		}
-
 		var gateways []string
 		for _, gateway := range networkInterfaceDefinition["gateways"].([]interface{}) {
 			gateways = append(gateways, gateway.(string))
 		}
 
+		interfaceName := networkInterfaceDefinition["interface"].(string)
+
+		var ips []string
+		for _, ip := range networkInterfaceDefinition["ips"].([]interface{}) {
+			ips = append(ips, ip.(string))
+		}
+
+		nicTag := networkInterfaceDefinition["nic_tag"].(string)
+
+		var vlanID uint16
+		if vlanIDCheck, ok := networkInterfaceDefinition["vlan_id"].(int); ok {
+			vlanID = uint16(vlanIDCheck)
+		}
+
 		networkInterface := NetworkInterface{
 			// Required tags
-			Interface:   networkInterfaceDefinition["interface"].(string),
-			IPAddresses: ips,
-			Tag:         networkInterfaceDefinition["nic_tag"].(string),
-			Gateways:    gateways,
+			Interface:    interfaceName,
+			IPAddresses:  ips,
+			Tag:          nicTag,
+			Gateways:     gateways,
+			VirtualLANID: vlanID,
 		}
 
 		networkInterfaces = append(networkInterfaces, networkInterface)
