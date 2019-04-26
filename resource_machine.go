@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -229,10 +228,12 @@ func resourceMachine() *schema.Resource {
 					Type:     schema.TypeString,
 					Optional: true,
 				},
-				"quota": &schema.Schema{
-					Type:     schema.TypeInt,
-					Optional: true,
-				},
+			*/
+			"quota": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			/*
 				"ram": &schema.Schema{
 					Type:     schema.TypeInt,
 					Optional: true,
@@ -344,110 +345,41 @@ func resourceMachineCreate(d *schema.ResourceData, m interface{}) error {
 		return fmt.Errorf("Client is NULL")
 	}
 
-	id, err := uuid.Parse(d.Get("image_uuid").(string))
-	if err == nil {
-		var uuid *uuid.UUID
-		{
-			alias := d.Get("alias").(string)
-			brand := d.Get("brand").(string)
-
-			machine := Machine{
-				// Set the required items
-				Alias:     alias,
-				Brand:     brand,
-				ImageUUID: id,
-			}
-
-			// Set the optional items
-			if autoboot, ok := d.GetOk("autoboot"); ok {
-				machine.Autoboot = autoboot.(bool)
-			}
-
-			if cpuCap, ok := d.GetOk("cpu_cap"); ok {
-				machine.CPUCap = cpuCap.(uint32)
-			}
-
-			customerMetaData := map[string]string{}
-			for k, v := range d.Get("customer_metadata").(map[string]interface{}) {
-				customerMetaData[k] = v.(string)
-			}
-			machine.CustomerMetadata = customerMetaData
-
-			if maxPhysicalMemory, ok := d.GetOk("max_physical_memory"); ok {
-				machine.MaxPhysicalMemory = uint32(maxPhysicalMemory.(int))
-			}
-
-			if nics, ok := d.GetOk("nics"); ok {
-				machine.NetworkInterfaces, err = getNetworkInterfaces(nics)
-			}
-
-			for _, resolver := range d.Get("resolvers").([]interface{}) {
-				machine.Resolvers = append(machine.Resolvers, resolver.(string))
-			}
-
-			var err error
-			uuid, err = client.CreateMachine(&machine)
-			if err != nil {
-				return err
-			}
-		}
-
-		// Now, loop until provisioning is complete
-		var createdMachine *Machine
-		for {
-			createdMachine, err = client.GetMachine(*uuid)
-			if err != nil {
-				_ = client.DeleteMachine(*uuid)
-				return err
-			}
-
-			if createdMachine.State == "running" {
-				break
-			}
-
-			log.Printf("Waiting for machine to enter running state. Current state: %s\n", createdMachine.State)
-			time.Sleep(1 * time.Second)
-		}
-
-		createdMachine.UpdatePrimaryIP()
-		log.Printf("Primary IP address updated to %s", createdMachine.PrimaryIP)
-
-		// Set some important properties
-		d.Set("primary_ip", createdMachine.PrimaryIP)
-		d.Set("id", uuid.String())
-		d.SetId(uuid.String())
-
-		if createdMachine.PrimaryIP != "" {
-			d.SetConnInfo(map[string]string{
-				"type": "ssh",
-				"host": createdMachine.PrimaryIP,
-			})
-		}
+	machine := Machine{}
+	err := machine.LoadFromSchema(d)
+	if err != nil {
+		return err
 	}
 
-	return err
+	uuid, err := client.CreateMachine(&machine)
+	if err != nil {
+		return err
+	}
+
+	d.SetId(uuid.String())
+
+	return resourceMachineRead(d, m)
 }
 
 func resourceMachineRead(d *schema.ResourceData, m interface{}) error {
-	/*
-		log.Printf("Request to read machine with ID: %s\n", d.Id())
+	client := m.(*SmartOSClient)
+	if client == nil {
+		return fmt.Errorf("Client is NULL")
+	}
 
-		client := m.(*SmartOSClient)
-		if client == nil {
-			return fmt.Errorf("Client is NULL")
-		}
+	uuid, err := uuid.Parse(d.Id())
+	if err != nil {
+		log.Printf("Failed to parse incoming ID: %s", err)
+		return err
+	}
 
-		machineId, err := uuid.Parse(d.Id())
-		if err != nil {
-			return err
-		}
+	machine, err := client.GetMachine(uuid)
+	if err != nil {
+		log.Printf("Failed to retrieve machine with ID %s.  Error: %s", d.Id(), err)
+		return err
+	}
 
-		machine, err := client.GetMachine(machineId)
-		if err != nil {
-			return err
-		}
-	*/
-	return nil
+	return machine.SaveToSchema(d)
 }
 
 func resourceMachineUpdate(d *schema.ResourceData, m interface{}) error {
@@ -468,46 +400,4 @@ func resourceMachineDelete(d *schema.ResourceData, m interface{}) error {
 	}
 
 	return client.DeleteMachine(machineId)
-}
-
-func getNetworkInterfaces(d interface{}) ([]NetworkInterface, error) {
-	networkInterfaceDefinitions := d.([]interface{})
-
-	var networkInterfaces []NetworkInterface
-
-	for _, nid := range networkInterfaceDefinitions {
-		networkInterfaceDefinition := nid.(map[string]interface{})
-
-		var gateways []string
-		for _, gateway := range networkInterfaceDefinition["gateways"].([]interface{}) {
-			gateways = append(gateways, gateway.(string))
-		}
-
-		interfaceName := networkInterfaceDefinition["interface"].(string)
-
-		var ips []string
-		for _, ip := range networkInterfaceDefinition["ips"].([]interface{}) {
-			ips = append(ips, ip.(string))
-		}
-
-		nicTag := networkInterfaceDefinition["nic_tag"].(string)
-
-		var vlanID uint16
-		if vlanIDCheck, ok := networkInterfaceDefinition["vlan_id"].(int); ok {
-			vlanID = uint16(vlanIDCheck)
-		}
-
-		networkInterface := NetworkInterface{
-			// Required tags
-			Interface:    interfaceName,
-			IPAddresses:  ips,
-			Tag:          nicTag,
-			Gateways:     gateways,
-			VirtualLANID: vlanID,
-		}
-
-		networkInterfaces = append(networkInterfaces, networkInterface)
-	}
-
-	return networkInterfaces, nil
 }

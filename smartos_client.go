@@ -159,6 +159,8 @@ func (c *SmartOSClient) GetMachine(id uuid.UUID) (*Machine, error) {
 		return nil, err
 	}
 
+	machine.UpdatePrimaryIP()
+
 	return &machine, nil
 }
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform/helper/schema"
 )
 
 type Machine struct {
@@ -33,8 +34,8 @@ type Machine struct {
 		MaxSwap           uint32             `json:"max_swap,omitempty"`
 	*/
 	NetworkInterfaces []NetworkInterface `json:"nics,omitempty"`
+	Quota             uint32             `json:"quota,omitempty"`
 	/*
-		Quota             uint32             `json:"quota,omitempty"`
 		RAM               uint32             `json:"ram,omitempty"`
 	*/
 	Resolvers       []string `json:"resolvers,omitempty"`
@@ -52,6 +53,64 @@ func (m *Machine) UpdatePrimaryIP() {
 			break
 		}
 	}
+}
+
+func (m *Machine) LoadFromSchema(d *schema.ResourceData) error {
+
+	m.Alias = d.Get("alias").(string)
+	m.Brand = d.Get("brand").(string)
+
+	image_uuid, err := uuid.Parse(d.Get("image_uuid").(string))
+	if err != nil {
+		return err
+	}
+	m.ImageUUID = image_uuid
+
+	if autoboot, ok := d.GetOk("autoboot"); ok {
+		m.Autoboot = autoboot.(bool)
+	}
+
+	if cpuCap, ok := d.GetOk("cpu_cap"); ok {
+		m.CPUCap = cpuCap.(uint32)
+	}
+
+	customerMetaData := map[string]string{}
+	for k, v := range d.Get("customer_metadata").(map[string]interface{}) {
+		customerMetaData[k] = v.(string)
+	}
+	m.CustomerMetadata = customerMetaData
+
+	if maxPhysicalMemory, ok := d.GetOk("max_physical_memory"); ok {
+		m.MaxPhysicalMemory = uint32(maxPhysicalMemory.(int))
+	}
+
+	if nics, ok := d.GetOk("nics"); ok {
+		m.NetworkInterfaces, err = getNetworkInterfaces(nics)
+	}
+
+	if quota, ok := d.GetOk("quota"); ok {
+		m.Quota = uint32(quota.(int))
+	}
+
+	for _, resolver := range d.Get("resolvers").([]interface{}) {
+		m.Resolvers = append(m.Resolvers, resolver.(string))
+	}
+
+	return nil
+}
+
+func (m *Machine) SaveToSchema(d *schema.ResourceData) error {
+	d.Set("primary_ip", m.PrimaryIP)
+	d.Set("id", m.ID.String())
+
+	if m.PrimaryIP != "" {
+		d.SetConnInfo(map[string]string{
+			"type": "ssh",
+			"host": m.PrimaryIP,
+		})
+	}
+
+	return nil
 }
 
 type NetworkInterface struct {
@@ -73,4 +132,46 @@ type NetworkInterface struct {
 	Tag          string `json:"nic_tag,omitempty"`
 	IsPrimary    bool   `json:"primary,omitempty"`
 	VirtualLANID uint16 `json:"vlan_id,omitempty"`
+}
+
+func getNetworkInterfaces(d interface{}) ([]NetworkInterface, error) {
+	networkInterfaceDefinitions := d.([]interface{})
+
+	var networkInterfaces []NetworkInterface
+
+	for _, nid := range networkInterfaceDefinitions {
+		networkInterfaceDefinition := nid.(map[string]interface{})
+
+		var gateways []string
+		for _, gateway := range networkInterfaceDefinition["gateways"].([]interface{}) {
+			gateways = append(gateways, gateway.(string))
+		}
+
+		interfaceName := networkInterfaceDefinition["interface"].(string)
+
+		var ips []string
+		for _, ip := range networkInterfaceDefinition["ips"].([]interface{}) {
+			ips = append(ips, ip.(string))
+		}
+
+		nicTag := networkInterfaceDefinition["nic_tag"].(string)
+
+		var vlanID uint16
+		if vlanIDCheck, ok := networkInterfaceDefinition["vlan_id"].(int); ok {
+			vlanID = uint16(vlanIDCheck)
+		}
+
+		networkInterface := NetworkInterface{
+			// Required tags
+			Interface:    interfaceName,
+			IPAddresses:  ips,
+			Tag:          nicTag,
+			Gateways:     gateways,
+			VirtualLANID: vlanID,
+		}
+
+		networkInterfaces = append(networkInterfaces, networkInterface)
+	}
+
+	return networkInterfaces, nil
 }
