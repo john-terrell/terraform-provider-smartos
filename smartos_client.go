@@ -97,13 +97,14 @@ func (c *SmartOSClient) CreateMachine(machine *Machine) (*uuid.UUID, error) {
 	var b bytes.Buffer
 	session.Stderr = &b
 
+	log.Println("SSH execute: vmadm create")
 	err = session.Run("vmadm create")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Remote command vmadm failed.  Error: %s (%s)\n", err, b.String())
 	}
 
 	output := b.String()
-	log.Printf("Returned data: ", output)
+	log.Printf("Returned data: %s", output)
 
 	re := regexp.MustCompile("Successfully created VM ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})")
 	matches := re.FindStringSubmatch(output)
@@ -122,7 +123,43 @@ func (c *SmartOSClient) CreateMachine(machine *Machine) (*uuid.UUID, error) {
 }
 
 func (c *SmartOSClient) GetMachine(id uuid.UUID) (*Machine, error) {
-	return nil, fmt.Errorf("Not implemented")
+	err := c.Connect()
+	if err != nil {
+		return nil, err
+	}
+
+	session, err := c.client.NewSession()
+	if err != nil {
+		return nil, err
+	}
+
+	defer session.Close()
+
+	var b bytes.Buffer
+	session.Stdout = &b
+
+	var stderr bytes.Buffer
+	session.Stderr = &stderr
+
+	log.Println("SSH execute: vmadm get", id.String())
+	err = session.Run("vmadm get " + id.String())
+	if err != nil {
+		return nil, fmt.Errorf("Remote command vmadm failed.  Error: %s (%s)\n", err, stderr)
+	}
+
+	outputBytes := b.Bytes()
+
+	output := string(outputBytes)
+	log.Printf("Returned data: %s", output)
+
+	var machine Machine
+	err = json.Unmarshal(outputBytes, &machine)
+	if err != nil {
+		log.Printf("Failed to parse returned JSON: %s", err)
+		return nil, err
+	}
+
+	return &machine, nil
 }
 
 func (c *SmartOSClient) DeleteMachine(id uuid.UUID) error {
@@ -141,13 +178,14 @@ func (c *SmartOSClient) DeleteMachine(id uuid.UUID) error {
 	var b bytes.Buffer
 	session.Stderr = &b
 
+	log.Println("SSH execute: vmadm delete ", id.String())
 	err = session.Run("vmadm delete " + id.String())
 	if err != nil {
-		return err
+		return fmt.Errorf("Remote command vmadm failed.  Error: %s\n", err)
 	}
 
 	output := b.String()
-	log.Printf("Returned data: ", output)
+	log.Printf("Returned data: %s", output)
 
 	re := regexp.MustCompile("Successfully deleted VM ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})")
 	matches := re.FindStringSubmatch(output)

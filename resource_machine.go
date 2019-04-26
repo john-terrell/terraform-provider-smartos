@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -38,6 +39,7 @@ func resourceMachine() *schema.Resource {
 				"bhyve_extra_opts": &schema.Schema{
 					Type:     schema.TypeString,
 					Optional: true,
+					ForceNew: true,
 				},
 				"boot": &schema.Schema{
 					Type:     schema.TypeString,
@@ -46,11 +48,13 @@ func resourceMachine() *schema.Resource {
 				"bootrom": &schema.Schema{
 					Type:     schema.TypeString,
 					Optional: true,
+					ForceNew: true,
 				},
 			*/
 			"brand": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 			},
 			"cpu_cap": &schema.Schema{
 				Type:     schema.TypeInt,
@@ -64,14 +68,12 @@ func resourceMachine() *schema.Resource {
 				"cpu_type": &schema.Schema{
 					Type:     schema.TypeString,
 					Optional: true,
+					ForceNew: true,
 				},
 			*/
 			"customer_metadata": &schema.Schema{
-				Type:     schema.TypeList,
+				Type:     schema.TypeMap,
 				Optional: true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
 			},
 			"delegate_dataset": &schema.Schema{
 				Type:     schema.TypeBool,
@@ -82,6 +84,7 @@ func resourceMachine() *schema.Resource {
 				"disk_driver": &schema.Schema{
 					Type:     schema.TypeString,
 					Optional: true,
+					ForceNew: true,
 				},
 				"do_not_inventory": &schema.Schema{
 					Type:     schema.TypeBool,
@@ -114,6 +117,7 @@ func resourceMachine() *schema.Resource {
 			"image_uuid": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 			},
 			"internal_metadata": &schema.Schema{
 				Type:     schema.TypeList,
@@ -140,6 +144,7 @@ func resourceMachine() *schema.Resource {
 			"kernel_version": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
+				ForceNew: true,
 			},
 			/*
 				"limit_priv": &schema.Schema{
@@ -172,7 +177,39 @@ func resourceMachine() *schema.Resource {
 					Type:     schema.TypeInt,
 					Optional: true,
 				},
-				// "nics.*"
+			*/
+			"nics": &schema.Schema{
+				Type:     schema.TypeList,
+				Optional: true,
+				ForceNew: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"gateways": &schema.Schema{
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"interface": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"ips": &schema.Schema{
+							Type:     schema.TypeList,
+							Required: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"nic_tag": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
+			/*
 				"nic_driver": &schema.Schema{
 					Type:     schema.TypeString,
 					Optional: true,
@@ -201,6 +238,7 @@ func resourceMachine() *schema.Resource {
 			"ram": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
+				ForceNew: true,
 			},
 			"resolvers": &schema.Schema{
 				Type:     schema.TypeList,
@@ -235,6 +273,7 @@ func resourceMachine() *schema.Resource {
 			"vcpus": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
+				ForceNew: true,
 			},
 			/*
 				"vga": &schema.Schema{
@@ -299,32 +338,88 @@ func resourceMachine() *schema.Resource {
 }
 
 func resourceMachineCreate(d *schema.ResourceData, m interface{}) error {
+	d.SetId("")
+
+	client := m.(*SmartOSClient)
+	if client == nil {
+		return fmt.Errorf("Client is NULL")
+	}
+
 	id, err := uuid.Parse(d.Get("image_uuid").(string))
 	if err == nil {
-		machine := Machine{
-			// Set the required items
-			Alias:     d.Get("alias").(string),
-			Brand:     d.Get("brand").(string),
-			ImageUUID: id,
+		var uuid *uuid.UUID
+		{
+			machine := Machine{
+				// Set the required items
+				Alias:     d.Get("alias").(string),
+				Brand:     d.Get("brand").(string),
+				ImageUUID: id,
+			}
+
+			// Set the optional items
+			if autoboot, ok := d.GetOk("autoboot"); ok {
+				machine.Autoboot = autoboot.(bool)
+			}
+
+			if cpuCap, ok := d.GetOk("cpu_cap"); ok {
+				machine.CPUCap = cpuCap.(uint32)
+			}
+
+			if maxPhysicalMemory, ok := d.GetOk("max_physical_memory"); ok {
+				machine.MaxPhysicalMemory = uint32(maxPhysicalMemory.(int))
+			}
+
+			if nics, ok := d.GetOk("nics"); ok {
+				machine.NetworkInterfaces, err = getNetworkInterfaces(nics)
+			}
+
+			for _, resolver := range d.Get("resolvers").([]interface{}) {
+				machine.Resolvers = append(machine.Resolvers, resolver.(string))
+			}
+
+			customerMetaData := map[string]string{}
+			for k, v := range d.Get("customer_metadata").(map[string]interface{}) {
+				customerMetaData[k] = v.(string)
+			}
+			machine.CustomerMetadata = customerMetaData
+
+			var err error
+			uuid, err = client.CreateMachine(&machine)
+			if err != nil {
+				return err
+			}
 		}
 
-		// Set the optional items
-		if autoboot, ok := d.GetOk("autoboot"); ok {
-			machine.Autoboot = autoboot.(bool)
+		// Now, loop until provisioning is complete
+		var createdMachine *Machine
+		for {
+			createdMachine, err = client.GetMachine(*uuid)
+			if err != nil {
+				_ = client.DeleteMachine(*uuid)
+				return err
+			}
+
+			if createdMachine.State == "running" {
+				break
+			}
+
+			log.Printf("Waiting for machine to enter running state. Current state: %s\n", createdMachine.State)
+			time.Sleep(1 * time.Second)
 		}
 
-		if cpuCap, ok := d.GetOk("cpu_cap"); ok {
-			machine.CPUCap = cpuCap.(uint32)
-		}
+		createdMachine.UpdatePrimaryIP()
+		log.Printf("Primary IP address updated to %s", createdMachine.PrimaryIP)
 
-		client := m.(*SmartOSClient)
-		if client == nil {
-			return fmt.Errorf("Client is NULL")
-		}
+		// Set some important properties
+		d.Set("primary_ip", createdMachine.PrimaryIP)
+		d.Set("id", uuid.String())
+		d.SetId(uuid.String())
 
-		uuid, err := client.CreateMachine(&machine)
-		if err == nil {
-			d.SetId(uuid.String())
+		if createdMachine.PrimaryIP != "" {
+			d.SetConnInfo(map[string]string{
+				"type": "ssh",
+				"host": createdMachine.PrimaryIP,
+			})
 		}
 	}
 
@@ -332,6 +427,24 @@ func resourceMachineCreate(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceMachineRead(d *schema.ResourceData, m interface{}) error {
+	/*
+		log.Printf("Request to read machine with ID: %s\n", d.Id())
+
+		client := m.(*SmartOSClient)
+		if client == nil {
+			return fmt.Errorf("Client is NULL")
+		}
+
+		machineId, err := uuid.Parse(d.Id())
+		if err != nil {
+			return err
+		}
+
+		machine, err := client.GetMachine(machineId)
+		if err != nil {
+			return err
+		}
+	*/
 	return nil
 }
 
@@ -353,4 +466,36 @@ func resourceMachineDelete(d *schema.ResourceData, m interface{}) error {
 	}
 
 	return client.DeleteMachine(machineId)
+}
+
+func getNetworkInterfaces(d interface{}) ([]NetworkInterface, error) {
+	networkInterfaceDefinitions := d.([]interface{})
+
+	var networkInterfaces []NetworkInterface
+
+	for _, nid := range networkInterfaceDefinitions {
+		networkInterfaceDefinition := nid.(map[string]interface{})
+
+		var ips []string
+		for _, ip := range networkInterfaceDefinition["ips"].([]interface{}) {
+			ips = append(ips, ip.(string))
+		}
+
+		var gateways []string
+		for _, gateway := range networkInterfaceDefinition["gateways"].([]interface{}) {
+			gateways = append(gateways, gateway.(string))
+		}
+
+		networkInterface := NetworkInterface{
+			// Required tags
+			Interface:   networkInterfaceDefinition["interface"].(string),
+			IPAddresses: ips,
+			Tag:         networkInterfaceDefinition["nic_tag"].(string),
+			Gateways:    gateways,
+		}
+
+		networkInterfaces = append(networkInterfaces, networkInterface)
+	}
+
+	return networkInterfaces, nil
 }
