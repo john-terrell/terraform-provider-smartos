@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/google/uuid"
@@ -269,13 +268,11 @@ func resourceMachine() *schema.Resource {
 					Type:     schema.TypeString,
 					Optional: true,
 				},
-			*/
-			"vcpus": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-				ForceNew: true,
-			},
-			/*
+				"vcpus": &schema.Schema{
+					Type:     schema.TypeInt,
+					Optional: true,
+					ForceNew: true,
+				},
 				"vga": &schema.Schema{
 					Type:     schema.TypeString,
 					Optional: true,
@@ -341,10 +338,6 @@ func resourceMachineCreate(d *schema.ResourceData, m interface{}) error {
 	d.SetId("")
 
 	client := m.(*SmartOSClient)
-	if client == nil {
-		return fmt.Errorf("Client is NULL")
-	}
-
 	machine := Machine{}
 	err := machine.LoadFromSchema(d)
 	if err != nil {
@@ -363,10 +356,6 @@ func resourceMachineCreate(d *schema.ResourceData, m interface{}) error {
 
 func resourceMachineRead(d *schema.ResourceData, m interface{}) error {
 	client := m.(*SmartOSClient)
-	if client == nil {
-		return fmt.Errorf("Client is NULL")
-	}
-
 	uuid, err := uuid.Parse(d.Id())
 	if err != nil {
 		log.Printf("Failed to parse incoming ID: %s", err)
@@ -383,17 +372,71 @@ func resourceMachineRead(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceMachineUpdate(d *schema.ResourceData, m interface{}) error {
-	return nil
+	machineId, err := uuid.Parse(d.Id())
+	if err != nil {
+		return err
+	}
+
+	d.Partial(true)
+
+	machineUpdate := Machine{
+		ID: &machineId,
+	}
+
+	updatesRequired := false
+
+	if d.HasChange("alias") && !d.IsNewResource() {
+		_, newValue := d.GetChange("alias")
+
+		machineUpdate.Alias = newValue.(string)
+		updatesRequired = true
+	}
+
+	if d.HasChange("autoboot") && !d.IsNewResource() {
+		_, newValue := d.GetChange("autoboot")
+
+		machineUpdate.Autoboot = newBool(newValue.(bool))
+		updatesRequired = true
+	}
+
+	if d.HasChange("cpu_cap") && !d.IsNewResource() {
+		_, newValue := d.GetChange("cpu_cap")
+
+		machineUpdate.CPUCap = newUint32(uint32(newValue.(int)))
+		updatesRequired = true
+	}
+
+	if d.HasChange("max_physical_memory") && !d.IsNewResource() {
+		_, newValue := d.GetChange("max_physical_memory")
+
+		machineUpdate.MaxPhysicalMemory = newUint32(uint32(newValue.(int)))
+		updatesRequired = true
+	}
+
+	if d.HasChange("quota") && !d.IsNewResource() {
+		_, newValue := d.GetChange("quota")
+
+		machineUpdate.Quota = newUint32(uint32(newValue.(int)))
+		updatesRequired = true
+	}
+
+	if updatesRequired {
+		client := m.(*SmartOSClient)
+
+		err = client.UpdateMachine(&machineUpdate)
+		if err != nil {
+			return err
+		}
+	}
+
+	d.Partial(false)
+	return resourceMachineRead(d, m)
 }
 
 func resourceMachineDelete(d *schema.ResourceData, m interface{}) error {
 	log.Printf("Request to delete machine with ID: %s\n", d.Id())
 
 	client := m.(*SmartOSClient)
-	if client == nil {
-		return fmt.Errorf("Client is NULL")
-	}
-
 	machineId, err := uuid.Parse(d.Id())
 	if err != nil {
 		return err

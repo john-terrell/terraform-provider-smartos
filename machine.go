@@ -7,10 +7,10 @@ import (
 
 type Machine struct {
 	ID       *uuid.UUID `json:"uuid,omitempty"`
-	Alias    string     `json:"alias"`
-	Autoboot bool       `json:"autoboot,omitempty"`
-	Brand    string     `json:"brand"`
-	CPUCap   uint32     `json:"cpu_cap,omitempty"`
+	Alias    string     `json:"alias,omitempty"`
+	Autoboot *bool      `json:"autoboot,omitempty"`
+	Brand    string     `json:"brand,omitempty"`
+	CPUCap   *uint32    `json:"cpu_cap,omitempty"`
 	/*
 		CPUShares                  uint32             `json:"cpu_shares,omitempty"`
 	*/
@@ -21,7 +21,7 @@ type Machine struct {
 		FirewallEnabled            bool               `json:"firewall_enabled,omitempty"`
 		Hostname                   string             `json:"hostname,omitempty"`
 	*/
-	ImageUUID uuid.UUID `json:"image_uuid"`
+	ImageUUID *uuid.UUID `json:"image_uuid,omitempty"`
 	/*
 		InternalMetadata           map[string]string  `json:"internal_metadat,omitempty"`
 		InternalMetadataNamespaces map[string]string  `json:"internal_metadata_namespaces,omitempty"`
@@ -29,30 +29,41 @@ type Machine struct {
 		IndestructableZoneRoot     bool               `json:"indestructible_zoneroot,omitempty"`
 		KernelVersion              string             `json:"kernel_version,omitempty"`
 	*/
-	MaxPhysicalMemory uint32 `json:"max_physical_memory,omitempty"`
+	MaxPhysicalMemory *uint32 `json:"max_physical_memory,omitempty"`
 	/*
 		MaxSwap           uint32             `json:"max_swap,omitempty"`
 	*/
 	NetworkInterfaces []NetworkInterface `json:"nics,omitempty"`
-	Quota             uint32             `json:"quota,omitempty"`
+	Quota             *uint32            `json:"quota,omitempty"`
 	/*
 		RAM               uint32             `json:"ram,omitempty"`
 	*/
-	Resolvers       []string `json:"resolvers,omitempty"`
-	VirtualCPUCount uint16   `json:"vcpus,omitempty"`
-	State           string   `json:"state,omitempty"`
-
-	PrimaryIP string
+	Resolvers []string `json:"resolvers,omitempty"`
+	/*
+		VirtualCPUCount *uint16  `json:"vcpus,omitempty"`
+	*/
+	State     string `json:"state,omitempty"`
+	PrimaryIP string `json:"-"`
 }
 
 func (m *Machine) UpdatePrimaryIP() {
 	m.PrimaryIP = ""
 	for _, networkInterface := range m.NetworkInterfaces {
-		if networkInterface.IsPrimary {
+		if networkInterface.IsPrimary != nil {
 			m.PrimaryIP = networkInterface.IPAddress
 			break
 		}
 	}
+}
+
+func newBool(value bool) *bool {
+	n := value
+	return &n
+}
+
+func newUint32(value uint32) *uint32 {
+	n := value
+	return &n
 }
 
 func (m *Machine) LoadFromSchema(d *schema.ResourceData) error {
@@ -64,14 +75,14 @@ func (m *Machine) LoadFromSchema(d *schema.ResourceData) error {
 	if err != nil {
 		return err
 	}
-	m.ImageUUID = image_uuid
+	m.ImageUUID = &image_uuid
 
 	if autoboot, ok := d.GetOk("autoboot"); ok {
-		m.Autoboot = autoboot.(bool)
+		m.Autoboot = newBool(autoboot.(bool))
 	}
 
 	if cpuCap, ok := d.GetOk("cpu_cap"); ok {
-		m.CPUCap = cpuCap.(uint32)
+		m.CPUCap = newUint32(uint32(cpuCap.(int)))
 	}
 
 	customerMetaData := map[string]string{}
@@ -81,7 +92,7 @@ func (m *Machine) LoadFromSchema(d *schema.ResourceData) error {
 	m.CustomerMetadata = customerMetaData
 
 	if maxPhysicalMemory, ok := d.GetOk("max_physical_memory"); ok {
-		m.MaxPhysicalMemory = uint32(maxPhysicalMemory.(int))
+		m.MaxPhysicalMemory = newUint32(uint32(maxPhysicalMemory.(int)))
 	}
 
 	if nics, ok := d.GetOk("nics"); ok {
@@ -89,7 +100,7 @@ func (m *Machine) LoadFromSchema(d *schema.ResourceData) error {
 	}
 
 	if quota, ok := d.GetOk("quota"); ok {
-		m.Quota = uint32(quota.(int))
+		m.Quota = newUint32(uint32(quota.(int)))
 	}
 
 	for _, resolver := range d.Get("resolvers").([]interface{}) {
@@ -130,7 +141,7 @@ type NetworkInterface struct {
 		Model                 string   `json:"model,omitempty"`
 	*/
 	Tag          string `json:"nic_tag,omitempty"`
-	IsPrimary    bool   `json:"primary,omitempty"`
+	IsPrimary    *bool  `json:"primary,omitempty"`
 	VirtualLANID uint16 `json:"vlan_id,omitempty"`
 }
 

@@ -164,6 +164,43 @@ func (c *SmartOSClient) GetMachine(id uuid.UUID) (*Machine, error) {
 	return &machine, nil
 }
 
+func (c *SmartOSClient) UpdateMachine(machine *Machine) error {
+	err := c.Connect()
+	if err != nil {
+		return err
+	}
+
+	session, err := c.client.NewSession()
+	if err != nil {
+		return err
+	}
+
+	defer session.Close()
+
+	json, err := json.Marshal(machine)
+	if err != nil {
+		log.Fatalln("Failed to create JSON for machine.  Error: ", err.Error())
+	}
+
+	log.Println("JSON: ", string(json))
+
+	session.Stdin = bytes.NewReader(json)
+
+	var b bytes.Buffer
+	session.Stderr = &b
+
+	log.Println("SSH execute: vmadm update" + machine.ID.String())
+	err = session.Run("vmadm update " + machine.ID.String())
+	if err != nil {
+		return fmt.Errorf("Remote command vmadm failed.  Error: %s (%s)\n", err, b.String())
+	}
+
+	output := b.String()
+	log.Printf("Returned data: %s", output)
+
+	return nil
+}
+
 func (c *SmartOSClient) DeleteMachine(id uuid.UUID) error {
 	err := c.Connect()
 	if err != nil {
