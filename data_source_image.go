@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -15,27 +17,25 @@ func datasourceImage() *schema.Resource {
 			},
 			"version": &schema.Schema{
 				Type:     schema.TypeString,
-				Computed: true,
+				Required: true,
 			},
 		},
 	}
 }
 
-func datasourceImageReadRunc(d *schema.ResourceData, meta interface{}) error {
-	/*	client := meta.(*FifoClient)
+func datasourceImageReadRunc(d *schema.ResourceData, m interface{}) error {
+	client := m.(*SmartOSClient)
 
-		name := d.Get("name").(string)
-		pkg, found, err := client.FindPackage(name)
-		if err != nil {
-			return err
-		}
+	name := d.Get("name").(string)
+	version := d.Get("version").(string)
 
-		if !found {
-			return fmt.Errorf("Package %s was not found", name)
-		}
+	image, err := client.GetImage(name, version)
+	if err != nil {
+		log.Printf("Failed to retrieve image with name: %s, version: %s.  Error: %s", name, version, err)
+		return err
+	}
 
-		d.Set("uuid", pkg.UUID)
-		d.SetId(pkg.UUID)
-	*/
+	d.SetId(image.ID.String())
+
 	return nil
 }

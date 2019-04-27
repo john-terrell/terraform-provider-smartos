@@ -3,6 +3,11 @@ provider "smartos" {
     "user" = "root"
 }
 
+data "smartos_image" "test" {
+    "name" = "base-64-lts"
+    "version"  = "18.4.0"
+}
+
 resource "smartos_machine" "test" {
     "alias" = "provider-test-512"
     "brand" = "joyent"
@@ -13,7 +18,7 @@ resource "smartos_machine" "test" {
         "user-script" = "/usr/sbin/mdata-get root_authorized_keys > ~root/.ssh/authorized_keys"
     }
 
-    "image_uuid" = "c193a558-1d63-11e9-97cf-97bb3ee5c14f"
+    "image_uuid" = "${data.smartos_image.test.id}"
     "max_physical_memory" = 512
     "nics" = [
         {

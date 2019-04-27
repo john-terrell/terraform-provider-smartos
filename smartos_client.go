@@ -235,3 +235,58 @@ func (c *SmartOSClient) DeleteMachine(id uuid.UUID) error {
 
 	return nil
 }
+
+func (c *SmartOSClient) GetImage(name string, version string) (*Image, error) {
+	err := c.Connect()
+	if err != nil {
+		return nil, err
+	}
+
+	session, err := c.client.NewSession()
+	if err != nil {
+		return nil, err
+	}
+
+	defer session.Close()
+
+	var b bytes.Buffer
+	session.Stdout = &b
+
+	var stderr bytes.Buffer
+	session.Stderr = &stderr
+
+	command := fmt.Sprintf("imgadm list -j name=%s version=%s", name, version)
+	err = session.Run(command)
+	if err != nil {
+		return nil, fmt.Errorf("Remote command vmadm failed.  Error: %s (%s)\n", err, stderr)
+	}
+
+	outputBytes := b.Bytes()
+
+	output := string(outputBytes)
+	log.Printf("Returned data: %s", output)
+
+	var images []map[string]interface{}
+	err = json.Unmarshal(outputBytes, &images)
+	if err != nil {
+		log.Printf("Failed to parse returned JSON: %s", err)
+		return nil, err
+	}
+
+	if len(images) == 0 {
+		log.Printf("No images found")
+		return nil, fmt.Errorf("Unable to locate image")
+	}
+
+	imageInfo := images[0]
+	manifest := imageInfo["manifest"].(map[string]interface{})
+
+	image := Image{}
+	image.Name = manifest["name"].(string)
+	image.Version = manifest["version"].(string)
+
+	imageID, err := uuid.Parse(manifest["uuid"].(string))
+	image.ID = &imageID
+
+	return &image, nil
+}
