@@ -71,11 +71,11 @@ func (m *Machine) LoadFromSchema(d *schema.ResourceData) error {
 	m.Alias = d.Get("alias").(string)
 	m.Brand = d.Get("brand").(string)
 
-	image_uuid, err := uuid.Parse(d.Get("image_uuid").(string))
+	imageUUID, err := uuid.Parse(d.Get("image_uuid").(string))
 	if err != nil {
 		return err
 	}
-	m.ImageUUID = &image_uuid
+	m.ImageUUID = &imageUUID
 
 	if autoboot, ok := d.GetOk("autoboot"); ok {
 		m.Autoboot = newBool(autoboot.(bool))
@@ -173,7 +173,6 @@ func getNetworkInterfaces(d interface{}) ([]NetworkInterface, error) {
 		}
 
 		networkInterface := NetworkInterface{
-			// Required tags
 			Interface:    interfaceName,
 			IPAddresses:  ips,
 			Tag:          nicTag,

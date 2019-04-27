@@ -42,9 +42,6 @@ func providerDataSources() map[string]*schema.Resource {
 	}
 }
 
-// This is the function used to fetch the configuration params given
-// to our provider which we will use to initialise a client that
-// interacts with the Project Fifo API.
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	client := SmartOSClient{
 		host: d.Get("host").(string),
