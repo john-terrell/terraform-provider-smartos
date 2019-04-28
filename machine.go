@@ -32,6 +32,7 @@ type Machine struct {
 		IndestructableZoneRoot     bool               `json:"indestructible_zoneroot,omitempty"`
 		KernelVersion              string             `json:"kernel_version,omitempty"`
 	*/
+	MaintainResolvers *bool   `json:"maintain_resolvers,omitempty"`
 	MaxPhysicalMemory *uint32 `json:"max_physical_memory,omitempty"`
 	/*
 		MaxSwap           uint32             `json:"max_swap,omitempty"`
@@ -103,6 +104,10 @@ func (m *Machine) LoadFromSchema(d *schema.ResourceData) error {
 		m.MaxPhysicalMemory = newUint32(uint32(maxPhysicalMemory.(int)))
 	}
 
+	if maintainResolvers, ok := d.GetOk("maintain_resolvers"); ok {
+		m.MaintainResolvers = newBool(maintainResolvers.(bool))
+	}
+
 	if nics, ok := d.GetOk("nics"); ok {
 		m.NetworkInterfaces, err = getNetworkInterfaces(nics)
 	}
@@ -111,9 +116,11 @@ func (m *Machine) LoadFromSchema(d *schema.ResourceData) error {
 		m.Quota = newUint32(uint32(quota.(int)))
 	}
 
+	var resolvers []string
 	for _, resolver := range d.Get("resolvers").([]interface{}) {
-		m.Resolvers = append(m.Resolvers, resolver.(string))
+		resolvers = append(resolvers, resolver.(string))
 	}
+	m.Resolvers = resolvers
 
 	return nil
 }

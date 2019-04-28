@@ -148,10 +148,12 @@ func resourceMachine() *schema.Resource {
 					Type:     schema.TypeString,
 					Optional: true,
 				},
-				"maintain_resolvers": &schema.Schema{
-					Type:     schema.TypeBool,
-					Optional: true,
-				},
+			*/
+			"maintain_resolvers": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			/*
 				"max_locked_memory": &schema.Schema{
 					Type:     schema.TypeInt,
 					Optional: true,
@@ -419,6 +421,13 @@ func resourceMachineUpdate(d *schema.ResourceData, m interface{}) error {
 		}
 	}
 
+	if d.HasChange("maintain_resolvers") && !d.IsNewResource() {
+		_, newValue := d.GetChange("maintain_resolvers")
+
+		machineUpdate.MaintainResolvers = newBool(newValue.(bool))
+		updatesRequired = true
+	}
+
 	if d.HasChange("max_physical_memory") && !d.IsNewResource() {
 		_, newValue := d.GetChange("max_physical_memory")
 
@@ -430,6 +439,17 @@ func resourceMachineUpdate(d *schema.ResourceData, m interface{}) error {
 		_, newValue := d.GetChange("quota")
 
 		machineUpdate.Quota = newUint32(uint32(newValue.(int)))
+		updatesRequired = true
+	}
+
+	if d.HasChange("resolvers") && !d.IsNewResource() {
+		_, newSchemaValue := d.GetChange("resolvers")
+
+		var resolvers []string
+		for _, resolver := range newSchemaValue.([]interface{}) {
+			resolvers = append(resolvers, resolver.(string))
+		}
+		machineUpdate.Resolvers = resolvers
 		updatesRequired = true
 	}
 

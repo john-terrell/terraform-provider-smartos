@@ -31,15 +31,6 @@ func ReconcileMaps(oldMap map[string]interface{}, newMap map[string]interface{},
 	oldKeyIndex := 0
 
 	for {
-		if oldKeyIndex >= len(oldKeys) {
-			break
-		}
-
-		oldKey := oldKeys[oldKeyIndex]
-
-		// Get the new key at the same index.
-		log.Printf("COMPARE: oldKeyIndex '%d' oldKey '%s'\n", oldKeyIndex, oldKey)
-
 		// if there are no  more old keys, the remaining new keys need to be added
 		if oldKeyIndex >= len(oldKeys) {
 			break
@@ -50,6 +41,7 @@ func ReconcileMaps(oldMap map[string]interface{}, newMap map[string]interface{},
 			break
 		}
 
+		oldKey := oldKeys[oldKeyIndex]
 		newKey := newKeys[newKeyIndex]
 
 		log.Printf("COMPARING old key '%s' with new key '%s'\n", oldKey, newKey)
@@ -62,10 +54,10 @@ func ReconcileMaps(oldMap map[string]interface{}, newMap map[string]interface{},
 			if !itemsAreEqual(oldValue, newValue) {
 				// Value changed
 				updateItem(oldKey, newValue)
-				log.Printf("COMPARE: Updating customer metadata [%s] = %s", oldKey, newValue.(string))
+				log.Printf("COMPARE: Updating [%s] = %s", oldKey, newValue.(string))
 				changesMade = true
 			} else {
-				log.Printf("COMPARE: No change to customer metadata [%s] = %s", oldKey, newValue.(string))
+				log.Printf("COMPARE: No change to [%s] = %s", oldKey, newValue.(string))
 			}
 			newKeyIndex++
 			oldKeyIndex++
@@ -73,7 +65,7 @@ func ReconcileMaps(oldMap map[string]interface{}, newMap map[string]interface{},
 			// 'oldKey' was removed
 			oldValue := oldMap[oldKey].(string)
 			removeItem(oldKey)
-			log.Printf("COMPARE: Removing customer metadata [%s] = %s", oldKey, oldValue)
+			log.Printf("COMPARE: Removing [%s] = %s", oldKey, oldValue)
 			changesMade = true
 
 			oldKeyIndex++
@@ -82,7 +74,7 @@ func ReconcileMaps(oldMap map[string]interface{}, newMap map[string]interface{},
 			newValue := newMap[newKey]
 
 			addItem(newKey, newValue)
-			log.Printf("COMPARE: Adding customer metadata [%s] = %s", newKey, newValue.(string))
+			log.Printf("COMPARE: Adding [%s] = %s", newKey, newValue.(string))
 
 			newKeyIndex++
 			changesMade = true
@@ -94,7 +86,7 @@ func ReconcileMaps(oldMap map[string]interface{}, newMap map[string]interface{},
 		oldKey := oldKeys[oldKeyIndex]
 		oldValue := oldMap[oldKey].(string)
 		removeItem(oldKey)
-		log.Printf("COMPARE: Removing customer metadata at end [%s] = %s", oldKey, oldValue)
+		log.Printf("COMPARE: Removing at end [%s] = %s", oldKey, oldValue)
 		changesMade = true
 	}
 
@@ -104,7 +96,75 @@ func ReconcileMaps(oldMap map[string]interface{}, newMap map[string]interface{},
 		newValue := newMap[newKey]
 
 		addItem(newKey, newValue)
-		log.Printf("COMPARE: Adding customer metadata at end [%s] = %s", newKey, newValue.(string))
+		log.Printf("COMPARE: Adding at end [%s] = %s", newKey, newValue.(string))
+		changesMade = true
+	}
+
+	return changesMade
+}
+
+type AddSliceItemFunc func(string)
+type RemoveSliceItemFunc func(string)
+
+// ReconcileSlices compares two maps; one with old data and one with new data and calls the various argument functions reflecting what operations are necessary to transform the old map into the new.
+func ReconcileSlices(oldSlice []string, newSlice []string, addItem AddSliceItemFunc, removeItem RemoveSliceItemFunc) bool {
+	changesMade := false
+
+	sort.Strings(oldSlice)
+	sort.Strings(newSlice)
+
+	newSliceIndex := 0
+	oldSliceIndex := 0
+
+	for {
+		// if there are no  more old keys, the remaining new keys need to be added
+		if oldSliceIndex >= len(oldSlice) {
+			break
+		}
+
+		// If there are no more new keys, the remaining old keys need to be removed.
+		if newSliceIndex >= len(newSlice) {
+			break
+		}
+
+		oldValue := oldSlice[oldSliceIndex]
+		newValue := newSlice[newSliceIndex]
+
+		log.Printf("COMPARING old value '%s' with new value '%s'\n", oldValue, newValue)
+
+		if oldValue == newValue {
+			newSliceIndex++
+			oldSliceIndex++
+		} else if oldValue < newValue {
+			// 'oldValue' was removed
+			removeItem(oldValue)
+			log.Printf("COMPARE: Removing [%s]", oldValue)
+			changesMade = true
+
+			oldSliceIndex++
+		} else {
+			// 'newValue' was added
+			addItem(newValue)
+			log.Printf("COMPARE: Adding [%s]", newValue)
+
+			newSliceIndex++
+			changesMade = true
+		}
+	}
+
+	// Remove any remaining old keys
+	for ; oldSliceIndex < len(oldSlice); oldSliceIndex++ {
+		oldValue := oldSlice[oldSliceIndex]
+		removeItem(oldValue)
+		log.Printf("COMPARE: Removing [%s]", oldValue)
+		changesMade = true
+	}
+
+	// Add any remaining new keys
+	for ; newSliceIndex < len(newSlice); newSliceIndex++ {
+		newValue := newSlice[newSliceIndex]
+		addItem(newValue)
+		log.Printf("COMPARE: Adding at end [%s]", newValue)
 		changesMade = true
 	}
 

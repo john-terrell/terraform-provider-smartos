@@ -19,6 +19,7 @@ resource "smartos_machine" "test" {
     }
 
     "image_uuid" = "${data.smartos_image.test.id}"
+    "maintain_resolvers" = true
     "max_physical_memory" = 512
     "nics" = [
         {
