@@ -38,6 +38,12 @@ Currently, the following data and resources are provided:
 - smartos_image (Data source - the images must already have been imported using 'imgadm import')
 - smartos_machine (Resource)
 
+NOTE: The property names supported by this provider match (as much as possible) those defined by Joyent for use with their 'vmadm' utility.   See the man page (specifically the PROPERTIES section) for that utility for more info:
+
+https://smartos.org/man/1m/vmadm
+
+Many of the properties defined in the man page are not yet supported by the provider.
+
 ### Example ###
 
 The following example shows you how to configure two simple zones - one running Illumos (base-64-lts from Joyent) and the other running Ubuntu 16.04.
