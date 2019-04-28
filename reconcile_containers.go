@@ -31,7 +31,7 @@ func ReconcileMaps(oldMap map[string]interface{}, newMap map[string]interface{},
 	oldKeyIndex := 0
 
 	for {
-		// if there are no  more old keys, the remaining new keys need to be added
+		// if there are no more old keys, the remaining new keys need to be added
 		if oldKeyIndex >= len(oldKeys) {
 			break
 		}
@@ -106,7 +106,7 @@ func ReconcileMaps(oldMap map[string]interface{}, newMap map[string]interface{},
 type AddSliceItemFunc func(string)
 type RemoveSliceItemFunc func(string)
 
-// ReconcileSlices compares two maps; one with old data and one with new data and calls the various argument functions reflecting what operations are necessary to transform the old map into the new.
+// ReconcileSlices compares two slices; one with old data and one with new data and calls the various argument functions reflecting what operations are necessary to transform the old slice into the new.
 func ReconcileSlices(oldSlice []string, newSlice []string, addItem AddSliceItemFunc, removeItem RemoveSliceItemFunc) bool {
 	changesMade := false
 
@@ -117,12 +117,12 @@ func ReconcileSlices(oldSlice []string, newSlice []string, addItem AddSliceItemF
 	oldSliceIndex := 0
 
 	for {
-		// if there are no  more old keys, the remaining new keys need to be added
+		// if there are no more old values, the remaining new values need to be added
 		if oldSliceIndex >= len(oldSlice) {
 			break
 		}
 
-		// If there are no more new keys, the remaining old keys need to be removed.
+		// If there are no more new values, the remaining old values need to be removed.
 		if newSliceIndex >= len(newSlice) {
 			break
 		}
@@ -152,7 +152,7 @@ func ReconcileSlices(oldSlice []string, newSlice []string, addItem AddSliceItemF
 		}
 	}
 
-	// Remove any remaining old keys
+	// Remove any remaining old values
 	for ; oldSliceIndex < len(oldSlice); oldSliceIndex++ {
 		oldValue := oldSlice[oldSliceIndex]
 		removeItem(oldValue)
@@ -160,7 +160,7 @@ func ReconcileSlices(oldSlice []string, newSlice []string, addItem AddSliceItemF
 		changesMade = true
 	}
 
-	// Add any remaining new keys
+	// Add any remaining new values
 	for ; newSliceIndex < len(newSlice); newSliceIndex++ {
 		newValue := newSlice[newSliceIndex]
 		addItem(newValue)
