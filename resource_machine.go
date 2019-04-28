@@ -139,11 +139,13 @@ func resourceMachine() *schema.Resource {
 					Type:     schema.TypeBool,
 					Optional: true,
 				},
-				"kernel_version": &schema.Schema{
-					Type:     schema.TypeString,
-					Optional: true,
-					ForceNew: true,
-				},
+			*/
+			"kernel_version": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
+			/*
 				"limit_priv": &schema.Schema{
 					Type:     schema.TypeString,
 					Optional: true,

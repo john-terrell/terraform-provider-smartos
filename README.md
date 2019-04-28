@@ -15,7 +15,7 @@ Using the provider
 This provider can be used to provision machines with a SmartOS host via SSH.  SSH public keys are expected to already be installed on the SmartOS host in order for this provider to work.   
 
 NOTE: Currently, this provider only supports a subset of properties for SmartOS virtual machines.
-NOTE: Currently, only native OS virtual machines are supported (LX, KVM and Bhyve machines will be supported next)
+NOTE: Currently, only OS virtual machines are supported (KVM and Bhyve machines will be supported next)
 
 ### Setup ###
 
@@ -40,7 +40,9 @@ Currently, the following data and resources are provided:
 
 ### Example ###
 
-The following example shows you how to configure a simple zone running Illumos (base-64-lts from Joyent)
+The following example shows you how to configure two simple zones - one running Illumos (base-64-lts from Joyent) and the other running Ubuntu 16.04.
+
+(See the included sample.tf)
 
 ```hcl
 provider "smartos" {
@@ -51,6 +53,11 @@ provider "smartos" {
 data "smartos_image" "illumos" {
     "name" = "base-64-lts"
     "version"  = "18.4.0"
+}
+
+data "smartos_image" "linux" {
+    "name" = "ubuntu-16.04"
+    "version"  = "20170403"
 }
 
 resource "smartos_machine" "illumos" {
@@ -87,4 +94,38 @@ resource "smartos_machine" "illumos" {
     }
 }
 
+resource "smartos_machine" "linux" {
+    "alias" = "provider-test-linux"
+    "brand" = "lx"
+    "kernel_version" = "3.16.0"
+    "cpu_cap" = 100
+
+    "customer_metadata" = {
+        # Note: this is my public SSH key...use your own.  :-)
+        "root_authorized_keys" = "... copy this from your ~/.ssh/id_rsa.pub ..."
+        "user-script" = "/usr/sbin/mdata-get root_authorized_keys > ~root/.ssh/authorized_keys"
+    }
+
+    "image_uuid" = "${data.smartos_image.linux.id}"
+    "maintain_resolvers" = true
+    "max_physical_memory" = 512
+    "nics" = [
+        {
+            "nic_tag" = "external"
+            "ips" = ["10.0.222.223/16"]
+            "gateways" = ["10.0.0.1"]
+            "interface" = "net5"
+        }
+    ]
+    "quota" = 25
+
+    "resolvers" = ["1.1.1.1", "1.0.0.1"]
+
+    provisioner "remote-exec" {
+        inline = [
+            "apt-get update",
+            "apt-get -y install htop",
+        ]
+    }
+}
 ```

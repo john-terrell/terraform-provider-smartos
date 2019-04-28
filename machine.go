@@ -30,8 +30,8 @@ type Machine struct {
 		InternalMetadataNamespaces map[string]string  `json:"internal_metadata_namespaces,omitempty"`
 		IndestructableDelegated    bool               `json:"indestructible_delegated,omitempty"`
 		IndestructableZoneRoot     bool               `json:"indestructible_zoneroot,omitempty"`
-		KernelVersion              string             `json:"kernel_version,omitempty"`
 	*/
+	KernelVersion     string  `json:"kernel_version,omitempty"`
 	MaintainResolvers *bool   `json:"maintain_resolvers,omitempty"`
 	MaxPhysicalMemory *uint32 `json:"max_physical_memory,omitempty"`
 	/*
@@ -99,6 +99,10 @@ func (m *Machine) LoadFromSchema(d *schema.ResourceData) error {
 		customerMetaData[k] = v.(string)
 	}
 	m.CustomerMetadata = customerMetaData
+
+	if kernelVersion, ok := d.GetOk("kernel_version"); ok {
+		m.KernelVersion = kernelVersion.(string)
+	}
 
 	if maxPhysicalMemory, ok := d.GetOk("max_physical_memory"); ok {
 		m.MaxPhysicalMemory = newUint32(uint32(maxPhysicalMemory.(int)))
