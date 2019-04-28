@@ -144,7 +144,7 @@ func (c *SmartOSClient) GetMachine(id uuid.UUID) (*Machine, error) {
 	log.Println("SSH execute: vmadm get", id.String())
 	err = session.Run("vmadm get " + id.String())
 	if err != nil {
-		return nil, fmt.Errorf("Remote command vmadm failed.  Error: %s (%s)\n", err, stderr)
+		return nil, fmt.Errorf("Remote command vmadm failed.  Error: %s (%s)\n", err, stderr.String())
 	}
 
 	outputBytes := b.Bytes()
@@ -258,7 +258,7 @@ func (c *SmartOSClient) GetImage(name string, version string) (*Image, error) {
 	command := fmt.Sprintf("imgadm list -j name=%s version=%s", name, version)
 	err = session.Run(command)
 	if err != nil {
-		return nil, fmt.Errorf("Remote command vmadm failed.  Error: %s (%s)\n", err, stderr)
+		return nil, fmt.Errorf("Remote command vmadm failed.  Error: %s (%s)\n", err, stderr.String())
 	}
 
 	outputBytes := b.Bytes()
