@@ -406,6 +406,19 @@ func resourceMachineUpdate(d *schema.ResourceData, m interface{}) error {
 		updatesRequired = true
 	}
 
+	if d.HasChange("customer_metadata") && !d.IsNewResource() {
+		oldSchemaValue, newSchemaValue := d.GetChange("customer_metadata")
+		oldMap := oldSchemaValue.(map[string]interface{})
+		newMap := newSchemaValue.(map[string]interface{})
+
+		var addItem func(key string, value interface{}) = machineUpdate.setCustomerMetadata
+		var removeItem func(key string) = machineUpdate.removeCustomerMetadata
+
+		if ReconcileMaps(oldMap, newMap, addItem, addItem, removeItem, stringsAreEqual) {
+			updatesRequired = true
+		}
+	}
+
 	if d.HasChange("max_physical_memory") && !d.IsNewResource() {
 		_, newValue := d.GetChange("max_physical_memory")
 

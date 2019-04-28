@@ -14,7 +14,10 @@ type Machine struct {
 	/*
 		CPUShares                  uint32             `json:"cpu_shares,omitempty"`
 	*/
-	CustomerMetadata map[string]string `json:"customer_metadata,omitempty"`
+	CustomerMetadata       map[string]string `json:"customer_metadata,omitempty"`
+	SetCustomerMetadata    map[string]string `json:"set_customer_metadata,omitempty"`    // for updates
+	RemoveCustomerMetadata []string          `json:"remove_customer_metadata,omitempty"` // for updates
+
 	/*
 		DelegateDataset            bool               `json:"delegate_dataset,omitempty"`
 		DNSDomain                  string             `json:"dns_domain,omitempty"`
@@ -63,6 +66,11 @@ func newBool(value bool) *bool {
 
 func newUint32(value uint32) *uint32 {
 	n := value
+	return &n
+}
+
+func newStringMap() *map[string]string {
+	var n map[string]string
 	return &n
 }
 
@@ -122,6 +130,22 @@ func (m *Machine) SaveToSchema(d *schema.ResourceData) error {
 	}
 
 	return nil
+}
+
+func (m *Machine) setCustomerMetadata(key string, value interface{}) {
+	if m.SetCustomerMetadata == nil {
+		m.SetCustomerMetadata = make(map[string]string)
+	}
+
+	m.SetCustomerMetadata[key] = value.(string)
+}
+
+func (m *Machine) removeCustomerMetadata(key string) {
+	m.RemoveCustomerMetadata = append(m.RemoveCustomerMetadata, key)
+}
+
+func stringsAreEqual(a interface{}, b interface{}) bool {
+	return a.(string) == b.(string)
 }
 
 type NetworkInterface struct {
