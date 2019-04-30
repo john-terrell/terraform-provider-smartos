@@ -188,6 +188,7 @@ func resourceMachine() *schema.Resource {
 						"gateways": &schema.Schema{
 							Type:     schema.TypeList,
 							Optional: true,
+							ForceNew: true,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
@@ -195,10 +196,12 @@ func resourceMachine() *schema.Resource {
 						"interface": &schema.Schema{
 							Type:     schema.TypeString,
 							Required: true,
+							ForceNew: true,
 						},
 						"ips": &schema.Schema{
 							Type:     schema.TypeList,
 							Required: true,
+							ForceNew: true,
 							Elem: &schema.Schema{
 								Type: schema.TypeString,
 							},
@@ -206,6 +209,7 @@ func resourceMachine() *schema.Resource {
 						"nic_tag": &schema.Schema{
 							Type:     schema.TypeString,
 							Required: true,
+							ForceNew: true,
 						},
 					},
 				},
