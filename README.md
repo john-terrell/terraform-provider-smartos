@@ -35,7 +35,7 @@ The following arguments are supported.
 
 Currently, the following data and resources are provided:
 
-- smartos_image (Data source - the images must already have been imported using 'imgadm import')
+- smartos_image (Data source - the images will be imported on first use by a smartos_machine stanza.)
 - smartos_machine (Resource)
 
 NOTE: The property names supported by this provider match (as much as possible) those defined by Joyent for use with their 'vmadm' utility.   See the man page (specifically the PROPERTIES section) for that utility for more info:

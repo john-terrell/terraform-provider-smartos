@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform/helper/schema"
@@ -29,7 +30,21 @@ func datasourceImageReadRunc(d *schema.ResourceData, m interface{}) error {
 	name := d.Get("name").(string)
 	version := d.Get("version").(string)
 
-	image, err := client.GetImage(name, version)
+	var image *Image
+	var err error
+
+	image, err = client.GetLocalImage(name, version)
+	if err != nil {
+		return err
+	}
+
+	if image == nil {
+		image, err = client.FindRemoteImage(name, version)
+		if err == nil && image == nil {
+			return fmt.Errorf("Image not found")
+		}
+	}
+
 	if err != nil {
 		log.Printf("Failed to retrieve image with name: %s, version: %s.  Error: %s", name, version, err)
 		return err
