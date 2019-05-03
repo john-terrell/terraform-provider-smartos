@@ -141,7 +141,7 @@ resource "smartos_machine" "linux" {
 
 resource "smartos_machine" "linux-kvm" {
     "alias" = "provider-test-linux-kvm"
-    "brand" = "lx"
+    "brand" = "kvm"
     "kernel_version" = "3.16.0"
     "vcpus" = 2
 
