@@ -86,11 +86,27 @@ func (c *SmartOSClient) CreateMachine(machine *Machine) (*uuid.UUID, error) {
 	defer session.Close()
 
 	// Ensure the image has been imported
-	log.Printf("Ensuring image with UUID %s has been imported", machine.ImageUUID.String())
-	err = c.ImportRemoteImage(*machine.ImageUUID)
-	if err != nil {
-		log.Fatalln("Failed to import image for machine.  Error: ", err.Error())
-		return nil, err
+	if machine.ImageUUID != nil && *machine.ImageUUID != uuid.Nil {
+		log.Printf("Ensuring image with UUID %s has been imported", machine.ImageUUID.String())
+		err = c.ImportRemoteImage(*machine.ImageUUID)
+		if err != nil {
+			log.Fatalln("Failed to import image for machine.  Error: ", err.Error())
+			return nil, err
+		}
+	} else if machine.Brand == "joyent" || machine.Brand == "lx" {
+		log.Fatalln("No image specifiec for OS VM.")
+		return nil, fmt.Errorf("No image specifiec for OS VM.")
+	}
+
+	// Ensure any disk images are imported
+	for _, disk := range machine.Disks {
+		if disk.ImageUUID != nil {
+			err = c.ImportRemoteImage(*disk.ImageUUID)
+			if err != nil {
+				log.Fatalf("Failed to import disk image: %s (Error: %s)", disk.ImageUUID.String(), err.Error())
+				return nil, err
+			}
+		}
 	}
 
 	json, err := json.Marshal(machine)
@@ -371,6 +387,8 @@ func (c *SmartOSClient) ImportRemoteImage(uuid uuid.UUID) error {
 
 	var stderr bytes.Buffer
 	session.Stderr = &stderr
+
+	log.Printf("Importing image with UUID: %s\n", uuid.String())
 
 	command := fmt.Sprintf("imgadm import %s", uuid.String())
 	err = session.Run(command)

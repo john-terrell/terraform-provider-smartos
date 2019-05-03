@@ -13,6 +13,11 @@ data "smartos_image" "linux" {
     "version"  = "20170403"
 }
 
+data "smartos_image" "linux_kvm" {
+    "name" = "ubuntu-certified-16.04"
+    "version" = "20190212"
+}
+
 resource "smartos_machine" "illumos" {
     "alias" = "provider-test-illumos"
     "brand" = "joyent"
@@ -73,6 +78,50 @@ resource "smartos_machine" "linux" {
     "quota" = 25
 
     "resolvers" = ["1.1.1.1", "1.0.0.1"]
+
+    provisioner "remote-exec" {
+        inline = [
+            "apt-get update",
+            "apt-get -y install htop",
+        ]
+    }
+}
+
+resource "smartos_machine" "linux-kvm" {
+    "alias" = "provider-test-linux-kvm"
+    "brand" = "lx"
+    "kernel_version" = "3.16.0"
+    "vcpus" = 2
+
+    "customer_metadata" = {
+        # Note: this is my public SSH key...use your own.  :-)
+        "root_authorized_keys" = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDYIHv3DoXnAMn+dggUup1a+jjSqpZiIU5ThgljXHG9KM+iy1W3zo9qshUE7vBj/l7l5aHzRKyXsmWb6EdmtlVBnYl7SH5IMGaEFlB6n7T+yoMRl7VczZZxvP+VSAac2HeLPvdrCDeJCckfkHeTg9E3rt2PcAz0REKDCm34lpsedgM4QrVh8D54NgqLCdpT+QpidEBwE1T5wGMId4OwBB+r1VJZyn+lstJreQ0mu67qn3TFKu5AxZoTdDj6BSDqqHEos5KirS4pz3zt3r5IbC3mv8vDm9+o6O5M2f7R6RRNfD9IPJANmO0k2Ajf529I0bGgAGgIpIXb8OaI6G+L48dR john@Johns-MacBook-Pro.local"
+        "user-script" = "/usr/sbin/mdata-get root_authorized_keys > ~root/.ssh/authorized_keys"
+    }
+
+    "maintain_resolvers" = true
+    "ram" = 512
+    "nics" = [
+        {
+            "nic_tag" = "external"
+            "ips" = ["10.0.222.224/16"]
+            "gateways" = ["10.0.0.1"]
+            "interface" = "net0"
+            "model" = "virtio"
+        }
+    ]
+    "quota" = 25
+
+    "resolvers" = ["1.1.1.1", "1.0.0.1"]
+
+    "disks" = [
+        {
+            "boot" = true
+            "image_uuid" = "${data.smartos_image.linux_kvm.id}"
+            "compression" = "lz4"
+            "model" = "virtio"
+        }
+    ]
 
     provisioner "remote-exec" {
         inline = [

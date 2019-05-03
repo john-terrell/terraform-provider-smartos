@@ -78,8 +78,42 @@ func resourceMachine() *schema.Resource {
 					Type:     schema.TypeBool,
 					Optional: true,
 				},
-				// 'disks.*' - disk object array
-
+			*/
+			"disks": &schema.Schema{
+				Type:     schema.TypeList,
+				Optional: true,
+				ForceNew: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"boot": &schema.Schema{
+							Type:     schema.TypeBool,
+							Optional: true,
+							ForceNew: true,
+						},
+						"compression": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+							ForceNew: true,
+						},
+						"image_uuid": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+							ForceNew: true,
+						},
+						"image_size": &schema.Schema{ // in MiB
+							Type:     schema.TypeInt,
+							Optional: true,
+							ForceNew: true,
+						},
+						"model": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+							ForceNew: true,
+						},
+					},
+				},
+			},
+			/*
 				"disk_driver": &schema.Schema{
 					Type:     schema.TypeString,
 					Optional: true,
@@ -113,7 +147,7 @@ func resourceMachine() *schema.Resource {
 			*/
 			"image_uuid": &schema.Schema{
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 				ForceNew: true,
 			},
 			/*
@@ -211,6 +245,11 @@ func resourceMachine() *schema.Resource {
 							Required: true,
 							ForceNew: true,
 						},
+						"model": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+							ForceNew: true,
+						},
 					},
 				},
 			},
@@ -240,13 +279,11 @@ func resourceMachine() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
-			/*
-				"ram": &schema.Schema{
-					Type:     schema.TypeInt,
-					Optional: true,
-					ForceNew: true,
-				},
-			*/
+			"ram": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				ForceNew: true,
+			},
 			"resolvers": &schema.Schema{
 				Type:     schema.TypeList,
 				Optional: true,
@@ -276,11 +313,13 @@ func resourceMachine() *schema.Resource {
 					Type:     schema.TypeString,
 					Optional: true,
 				},
-				"vcpus": &schema.Schema{
-					Type:     schema.TypeInt,
-					Optional: true,
-					ForceNew: true,
-				},
+			*/
+			"vcpus": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				ForceNew: true,
+			},
+			/*
 				"vga": &schema.Schema{
 					Type:     schema.TypeString,
 					Optional: true,

@@ -18,6 +18,8 @@ type Machine struct {
 	SetCustomerMetadata    map[string]string `json:"set_customer_metadata,omitempty"`    // for updates
 	RemoveCustomerMetadata []string          `json:"remove_customer_metadata,omitempty"` // for updates
 
+	Disks []Disk `json:"disks,omitempty"`
+
 	/*
 		DelegateDataset            bool               `json:"delegate_dataset,omitempty"`
 		DNSDomain                  string             `json:"dns_domain,omitempty"`
@@ -39,15 +41,11 @@ type Machine struct {
 	*/
 	NetworkInterfaces []NetworkInterface `json:"nics,omitempty"`
 	Quota             *uint32            `json:"quota,omitempty"`
-	/*
-		RAM               uint32             `json:"ram,omitempty"`
-	*/
-	Resolvers []string `json:"resolvers,omitempty"`
-	/*
-		VirtualCPUCount *uint16  `json:"vcpus,omitempty"`
-	*/
-	State     string `json:"state,omitempty"`
-	PrimaryIP string `json:"-"`
+	RAM               *uint32            `json:"ram,omitempty"`
+	Resolvers         []string           `json:"resolvers,omitempty"`
+	VirtualCPUCount   *uint32            `json:"vcpus,omitempty"`
+	State             string             `json:"state,omitempty"`
+	PrimaryIP         string             `json:"-"`
 }
 
 func (m *Machine) UpdatePrimaryIP() {
@@ -80,11 +78,10 @@ func (m *Machine) LoadFromSchema(d *schema.ResourceData) error {
 	m.Alias = d.Get("alias").(string)
 	m.Brand = d.Get("brand").(string)
 
-	imageUUID, err := uuid.Parse(d.Get("image_uuid").(string))
-	if err != nil {
-		return err
+	if iid, ok := d.GetOk("image_uuid"); ok {
+		uuid, _ := uuid.Parse(iid.(string))
+		m.ImageUUID = &uuid
 	}
-	m.ImageUUID = &imageUUID
 
 	if autoboot, ok := d.GetOk("autoboot"); ok {
 		m.Autoboot = newBool(autoboot.(bool))
@@ -100,6 +97,10 @@ func (m *Machine) LoadFromSchema(d *schema.ResourceData) error {
 	}
 	m.CustomerMetadata = customerMetaData
 
+	if disks, ok := d.GetOk("disks"); ok {
+		m.Disks, _ = getDisks(disks)
+	}
+
 	if kernelVersion, ok := d.GetOk("kernel_version"); ok {
 		m.KernelVersion = kernelVersion.(string)
 	}
@@ -113,11 +114,19 @@ func (m *Machine) LoadFromSchema(d *schema.ResourceData) error {
 	}
 
 	if nics, ok := d.GetOk("nics"); ok {
-		m.NetworkInterfaces, err = getNetworkInterfaces(nics)
+		m.NetworkInterfaces, _ = getNetworkInterfaces(nics)
 	}
 
 	if quota, ok := d.GetOk("quota"); ok {
 		m.Quota = newUint32(uint32(quota.(int)))
+	}
+
+	if ram, ok := d.GetOk("ram"); ok {
+		m.RAM = newUint32(uint32(ram.(int)))
+	}
+
+	if vcpus, ok := d.GetOk("vcpus"); ok {
+		m.VirtualCPUCount = newUint32(uint32(vcpus.(int)))
 	}
 
 	var resolvers []string
@@ -173,8 +182,8 @@ type NetworkInterface struct {
 	IPAddress   string   `json:"ip,omitempty"`
 	/*
 		HardwareAddress       string   `json:"mac,omitempty"`
-		Model                 string   `json:"model,omitempty"`
 	*/
+	Model        string `json:"model,omitempty"`
 	Tag          string `json:"nic_tag,omitempty"`
 	IsPrimary    *bool  `json:"primary,omitempty"`
 	VirtualLANID uint16 `json:"vlan_id,omitempty"`
@@ -207,16 +216,66 @@ func getNetworkInterfaces(d interface{}) ([]NetworkInterface, error) {
 			vlanID = uint16(vlanIDCheck)
 		}
 
+		model := ""
+		if m, ok := networkInterfaceDefinition["model"].(string); ok {
+			model = m
+		}
+
 		networkInterface := NetworkInterface{
 			Interface:    interfaceName,
 			IPAddresses:  ips,
 			Tag:          nicTag,
 			Gateways:     gateways,
 			VirtualLANID: vlanID,
+			Model:        model,
 		}
 
 		networkInterfaces = append(networkInterfaces, networkInterface)
 	}
 
 	return networkInterfaces, nil
+}
+
+type Disk struct {
+	Boot        bool       `json:"boot,omitempty"`
+	Compression string     `json:"compression,omitempty"`
+	ImageUUID   *uuid.UUID `json:"image_uuid,omitempty"`
+	ImageSize   uint32     `json:"image_size,omitempty"`
+	Model       string     `json:"model,omitempty"`
+}
+
+func getDisks(d interface{}) ([]Disk, error) {
+	diskDefinitions := d.([]interface{})
+
+	var disks []Disk
+
+	for _, dd := range diskDefinitions {
+		diskDefinition := dd.(map[string]interface{})
+		disk := Disk{}
+
+		if b, ok := diskDefinition["boot"]; ok {
+			disk.Boot = b.(bool)
+		}
+
+		if c, ok := diskDefinition["compression"]; ok {
+			disk.Compression = c.(string)
+		}
+
+		if iid, ok := diskDefinition["image_uuid"]; ok {
+			iid2, _ := uuid.Parse(iid.(string))
+			disk.ImageUUID = &iid2
+		}
+
+		if is, ok := diskDefinition["image_size"]; ok {
+			disk.ImageSize = uint32(is.(int))
+		}
+
+		if m, ok := diskDefinition["model"]; ok {
+			disk.Model = m.(string)
+		}
+
+		disks = append(disks, disk)
+	}
+
+	return disks, nil
 }

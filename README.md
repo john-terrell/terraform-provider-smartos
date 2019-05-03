@@ -15,7 +15,6 @@ Using the provider
 This provider can be used to provision machines with a SmartOS host via SSH.  SSH public keys are expected to already be installed on the SmartOS host in order for this provider to work.   
 
 NOTE: Currently, this provider only supports a subset of properties for SmartOS virtual machines.
-NOTE: Currently, only OS virtual machines are supported (KVM and Bhyve machines will be supported next)
 
 ### Setup ###
 
@@ -64,6 +63,11 @@ data "smartos_image" "illumos" {
 data "smartos_image" "linux" {
     "name" = "ubuntu-16.04"
     "version"  = "20170403"
+}
+
+data "smartos_image" "linux_kvm" {
+    "name" = "ubuntu-certified-16.04"
+    "version" = "20190212"
 }
 
 resource "smartos_machine" "illumos" {
@@ -134,4 +138,48 @@ resource "smartos_machine" "linux" {
         ]
     }
 }
+
+resource "smartos_machine" "linux-kvm" {
+    "alias" = "provider-test-linux-kvm"
+    "brand" = "lx"
+    "kernel_version" = "3.16.0"
+    "vcpus" = 2
+
+    "customer_metadata" = {
+        # Note: this is my public SSH key...use your own.  :-)
+        "root_authorized_keys" = "... copy this from your ~/.ssh/id_rsa.pub ..."
+    }
+
+    "maintain_resolvers" = true
+    "ram" = 512
+    "nics" = [
+        {
+            "nic_tag" = "external"
+            "ips" = ["10.0.222.224/16"]
+            "gateways" = ["10.0.0.1"]
+            "interface" = "net0"
+            "model" = "virtio"
+        }
+    ]
+    "quota" = 25
+
+    "resolvers" = ["1.1.1.1", "1.0.0.1"]
+
+    "disks" = [
+        {
+            "boot" = true
+            "image_uuid" = "${data.smartos_image.linux_kvm.id}"
+            "compression" = "lz4"
+            "model" = "virtio"
+        }
+    ]
+
+    provisioner "remote-exec" {
+        inline = [
+            "apt-get update",
+            "apt-get -y install htop",
+        ]
+    }
+}
+
 ```
