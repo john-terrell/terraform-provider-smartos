@@ -33,13 +33,13 @@ func datasourceImageReadRunc(d *schema.ResourceData, m interface{}) error {
 	var image *Image
 	var err error
 
-	image, err = client.GetLocalImage(name, version)
+	image, err = client.GetLocalImage(name, version, false)
 	if err != nil {
 		return err
 	}
 
 	if image == nil {
-		image, err = client.FindRemoteImage(name, version)
+		image, err = client.FindRemoteImage(name, version, false)
 		if err == nil && image == nil {
 			return fmt.Errorf("Image not found")
 		}

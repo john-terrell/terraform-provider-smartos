@@ -32,7 +32,8 @@ func providerSchema() map[string]*schema.Schema {
 
 func providerResources() map[string]*schema.Resource {
 	return map[string]*schema.Resource{
-		"smartos_machine": resourceMachine(),
+		"smartos_machine":          resourceMachine(),
+		"smartos_docker_container": resourceDockerContainer(),
 	}
 }
 

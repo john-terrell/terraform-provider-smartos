@@ -245,7 +245,7 @@ func (c *SmartOSClient) DeleteMachine(id uuid.UUID) error {
 	return nil
 }
 
-func (c *SmartOSClient) GetLocalImage(name string, version string) (*Image, error) {
+func (c *SmartOSClient) GetLocalImage(name string, version string, isDocker bool) (*Image, error) {
 	err := c.Connect()
 	if err != nil {
 		return nil, err
@@ -264,10 +264,16 @@ func (c *SmartOSClient) GetLocalImage(name string, version string) (*Image, erro
 	var stderr bytes.Buffer
 	session.Stderr = &stderr
 
-	command := fmt.Sprintf("imgadm list -j name=%s version=%s", name, version)
+	command := ""
+	if isDocker {
+		command = fmt.Sprintf("imgadm list -j --docker docker_repo=%s docker_tag=%s", name, version)
+	} else {
+		command = fmt.Sprintf("imgadm list -j name=%s version=%s", name, version)
+	}
+
 	err = session.Run(command)
 	if err != nil {
-		return nil, fmt.Errorf("Remote command vmadm failed.  Error: %s (%s)\n", err, stderr.String())
+		return nil, fmt.Errorf("Remote command imgadm failed.  Error: %s (%s)\n", err, stderr.String())
 	}
 
 	outputBytes := b.Bytes()
@@ -299,7 +305,7 @@ func (c *SmartOSClient) GetLocalImage(name string, version string) (*Image, erro
 	return &image, nil
 }
 
-func (c *SmartOSClient) FindRemoteImage(name string, version string) (*Image, error) {
+func (c *SmartOSClient) FindRemoteImage(name string, version string, isDocker bool) (*Image, error) {
 	err := c.Connect()
 	if err != nil {
 		return nil, err
@@ -318,10 +324,15 @@ func (c *SmartOSClient) FindRemoteImage(name string, version string) (*Image, er
 	var stderr bytes.Buffer
 	session.Stderr = &stderr
 
-	command := fmt.Sprintf("imgadm avail -j name=%s version=%s", name, version)
+	command := ""
+	if isDocker {
+		command = fmt.Sprintf("imgadm show %s:%s", name, version)
+	} else {
+		command = fmt.Sprintf("imgadm avail -j name=%s version=%s", name, version)
+	}
 	err = session.Run(command)
 	if err != nil {
-		return nil, fmt.Errorf("Remote command vmadm failed.  Error: %s (%s)\n", err, stderr.String())
+		return nil, fmt.Errorf("Remote command imgadm failed.  Error: %s (%s)\n", err, stderr.String())
 	}
 
 	outputBytes := b.Bytes()
@@ -375,7 +386,7 @@ func (c *SmartOSClient) ImportRemoteImage(uuid uuid.UUID) error {
 	command := fmt.Sprintf("imgadm import %s", uuid.String())
 	err = session.Run(command)
 	if err != nil {
-		return fmt.Errorf("Remote command vmadm failed.  Error: %s (%s)\n", err, stderr.String())
+		return fmt.Errorf("Remote command imgadm failed.  Error: %s (%s)\n", err, stderr.String())
 	}
 
 	outputBytes := b.Bytes()
@@ -386,23 +397,60 @@ func (c *SmartOSClient) ImportRemoteImage(uuid uuid.UUID) error {
 	return nil
 }
 
-func (c *SmartOSClient) GetImage(name string, version string) (*Image, error) {
-	image, err := c.GetLocalImage(name, version)
+func (c *SmartOSClient) GetImage(name string, version string, isDocker bool) (*Image, error) {
+	image, err := c.GetLocalImage(name, version, isDocker)
 	if err != nil {
 		return nil, err
 	}
 
 	if image == nil {
-		image, err = c.FindRemoteImage(name, version)
+		image, err = c.FindRemoteImage(name, version, isDocker)
 		if err != nil {
 			return nil, err
 		}
 
-		err = c.ImportRemoteImage(*image.ID)
+		if isDocker {
+			err = c.ImportDockerImage(name, version)
+		} else {
+			err = c.ImportRemoteImage(*image.ID)
+		}
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return image, nil
+}
+
+func (c *SmartOSClient) ImportDockerImage(repository string, version string) error {
+	err := c.Connect()
+	if err != nil {
+		return err
+	}
+
+	session, err := c.client.NewSession()
+	if err != nil {
+		return err
+	}
+
+	defer session.Close()
+
+	var b bytes.Buffer
+	session.Stdout = &b
+
+	var stderr bytes.Buffer
+	session.Stderr = &stderr
+
+	command := fmt.Sprintf("imgadm import %s:%s", repository, version)
+	err = session.Run(command)
+	if err != nil {
+		return fmt.Errorf("Remote command imgadm failed.  Error: %s (%s)\n", err, stderr.String())
+	}
+
+	outputBytes := b.Bytes()
+
+	output := string(outputBytes)
+	log.Printf("Returned data: %s", output)
+
+	return nil
 }
