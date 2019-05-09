@@ -277,7 +277,7 @@ func resourceMachine() *schema.Resource {
 			*/
 			"primary_ip": &schema.Schema{
 				Type:     schema.TypeString,
-				Optional: true,
+				Computed: true,
 			},
 			"quota": &schema.Schema{
 				Type:     schema.TypeInt,
