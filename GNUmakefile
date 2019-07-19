@@ -7,7 +7,8 @@ VERSION=$(shell git describe --tags --always)
 default: build
 
 build: fmtcheck
-	go install -ldflags="-X github.com/john-terrell/terraform-provider-smartos/version.ProviderVersion=$(VERSION)"
+	go install 
+	# -ldflags="-X github.com/john-terrell/terraform-provider-smartos/version.ProviderVersion=$(VERSION)"
 
 test: fmtcheck
 	go test -i $(TEST) || exit 1
