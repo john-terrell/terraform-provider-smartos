@@ -99,6 +99,12 @@ resource "smartos_machine" "illumos" {
       "pkgin -y update",
       "pkgin -y in htop",
     ]
+    connection {
+      type     = "ssh"
+      host     = self.primary_ip
+      user     = "root"
+      private_key = file("~/.ssh/id_rsa")
+    }
   }
 }
 
@@ -171,6 +177,12 @@ resource "smartos_machine" "linux-kvm" {
       "apt-get update",
       "apt-get -y install htop",
     ]
+    connection {
+      type     = "ssh"
+      host     = self.primary_ip
+      user     = "root"
+      private_key = file("~/.ssh/id_rsa")
+    }
   }
 }
 ```
