@@ -42,6 +42,17 @@ resource "smartos_machine" "illumos" {
 
   resolvers = ["1.1.1.1", "1.0.0.1"]
 
+  filesystems {
+    source = "/zdata/videos"
+    target = "/data/videos"
+    type   = "lofs"
+  }
+  filesystems {
+    source = "/zdata/music"
+    target = "/data/music"
+    type   = "lofs"
+  }
+
   provisioner "remote-exec" {
     inline = [
       "pkgin -y update",
@@ -80,6 +91,17 @@ resource "smartos_machine" "linux" {
   quota = 25
 
   resolvers = ["1.1.1.1", "1.0.0.1"]
+
+  filesystems {
+    source = "/zdata/videos"
+    target = "/data/videos"
+    type   = "lofs"
+  }
+  filesystems {
+    source = "/zdata/music"
+    target = "/data/music"
+    type   = "lofs"
+  }
 
   provisioner "remote-exec" {
     inline = [
