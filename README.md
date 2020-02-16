@@ -9,6 +9,34 @@ Requirements
 -	[Terraform](https://www.terraform.io/downloads.html) 0.12.x
 -	[Go](https://golang.org/doc/install) >=1.9 (to build the provider plugin)
 
+
+Building The Provider
+---------------------
+Make sure you have Go installed and your `$GOPATH` setup.
+
+Clone the repo:
+
+```sh
+$ mkdir -p $GOPATH/src/github.com/john-terrell
+$ cd $GOPATH/src/github.com/john-terrell
+$ git clone https://github.com/john-terrell/terraform-provider-smartos.git
+```
+
+Build the provider
+
+```sh
+$ cd $GOPATH/src/github.com/john-terrell/terraform-provider-smartos
+$ go get
+$ make build
+```
+
+In your Terraform project, initialize it by passing the directory that contains the built provider binary.
+
+```sh
+$ cd ~/git/my_terra_project
+$ terraform init --plugin-dir=$GOPATH/bin
+```
+
 Using the provider
 ------------------
 
