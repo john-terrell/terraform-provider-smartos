@@ -142,6 +142,9 @@ func (m *Machine) SaveToSchema(d *schema.ResourceData) error {
 	d.Set("primary_ip", m.PrimaryIP)
 	d.Set("id", m.ID.String())
 
+	// We update the customer_metadata in case machine provisioning pushed data there.
+	d.Set("customer_metadata", m.CustomerMetadata)
+
 	if m.PrimaryIP != "" {
 		d.SetConnInfo(map[string]string{
 			"type": "ssh",

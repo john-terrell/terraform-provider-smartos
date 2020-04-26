@@ -386,6 +386,7 @@ func resourceMachine() *schema.Resource {
 }
 
 func resourceMachineCreate(d *schema.ResourceData, m interface{}) error {
+	log.Printf("---------------- MachineCreate")
 	d.SetId("")
 
 	client := m.(*SmartOSClient)
@@ -402,10 +403,13 @@ func resourceMachineCreate(d *schema.ResourceData, m interface{}) error {
 
 	d.SetId(uuid.String())
 
-	return resourceMachineRead(d, m)
+	err = resourceMachineRead(d, m)
+	log.Printf("---------------- MachineCreate (COMPLETE)")
+	return err
 }
 
 func resourceMachineRead(d *schema.ResourceData, m interface{}) error {
+	log.Printf("---------------- MachineRead")
 	client := m.(*SmartOSClient)
 	uuid, err := uuid.Parse(d.Id())
 	if err != nil {
@@ -419,10 +423,13 @@ func resourceMachineRead(d *schema.ResourceData, m interface{}) error {
 		return err
 	}
 
-	return machine.SaveToSchema(d)
+	err = machine.SaveToSchema(d)
+	log.Printf("---------------- MachineRead (COMPLETE)")
+	return err
 }
 
 func resourceMachineUpdate(d *schema.ResourceData, m interface{}) error {
+	log.Printf("---------------- MachineUpdate")
 	machineId, err := uuid.Parse(d.Id())
 	if err != nil {
 		return err
@@ -512,7 +519,9 @@ func resourceMachineUpdate(d *schema.ResourceData, m interface{}) error {
 	}
 
 	d.Partial(false)
-	return resourceMachineRead(d, m)
+	err = resourceMachineRead(d, m)
+	log.Printf("---------------- MachineUpdate (COMPLETE)")
+	return err
 }
 
 func resourceMachineDelete(d *schema.ResourceData, m interface{}) error {
