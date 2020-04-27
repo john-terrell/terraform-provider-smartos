@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform/helper/schema"
 )
@@ -46,6 +48,8 @@ type Machine struct {
 	VirtualCPUCount   *uint32            `json:"vcpus,omitempty"`
 	State             string             `json:"state,omitempty"`
 	PrimaryIP         string             `json:"-"`
+
+	Metadata map[string]string `json:"-"`
 }
 
 func (m *Machine) UpdatePrimaryIP() {
@@ -56,6 +60,18 @@ func (m *Machine) UpdatePrimaryIP() {
 			break
 		}
 	}
+}
+
+func (m *Machine) UpdateMetadata() {
+	metadata := map[string]string{}
+	prefix := "terraform:"
+	for k, v := range m.CustomerMetadata {
+		if strings.HasPrefix(k, prefix) {
+			metadata[strings.TrimPrefix(k, prefix)] = v
+			delete(m.CustomerMetadata, k)
+		}
+	}
+	m.Metadata = metadata
 }
 
 func newBool(value bool) *bool {
@@ -96,6 +112,12 @@ func (m *Machine) LoadFromSchema(d *schema.ResourceData) error {
 		customerMetaData[k] = v.(string)
 	}
 	m.CustomerMetadata = customerMetaData
+
+	metadata := map[string]string{}
+	for k, v := range d.Get("metadata").(map[string]interface{}) {
+		metadata[k] = v.(string)
+	}
+	m.Metadata = metadata
 
 	if disks, ok := d.GetOk("disks"); ok {
 		m.Disks, _ = getDisks(disks)
@@ -142,8 +164,8 @@ func (m *Machine) SaveToSchema(d *schema.ResourceData) error {
 	d.Set("primary_ip", m.PrimaryIP)
 	d.Set("id", m.ID.String())
 
-	// We update the customer_metadata in case machine provisioning pushed data there.
-	d.Set("customer_metadata", m.CustomerMetadata)
+	// We update the metadata in case machine provisioning pushed data there.
+	d.Set("metadata", m.Metadata)
 
 	if m.PrimaryIP != "" {
 		d.SetConnInfo(map[string]string{

@@ -73,6 +73,10 @@ func resourceMachine() *schema.Resource {
 				Type:     schema.TypeMap,
 				Optional: true,
 			},
+			"metadata": &schema.Schema{
+				Type:     schema.TypeMap,
+				Computed: true,
+			},
 			/*
 				"delegate_dataset": &schema.Schema{
 					Type:     schema.TypeBool,
