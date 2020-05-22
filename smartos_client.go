@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"os/user"
-	"path"
+	"net"
 	"regexp"
 
 	"github.com/google/uuid"
@@ -15,9 +13,11 @@ import (
 )
 
 type SmartOSClient struct {
-	host   string
-	user   string
-	client *ssh.Client
+	host            string
+	user            string
+	client          *ssh.Client
+	agentConnection net.Conn
+	authMethods     []ssh.AuthMethod
 }
 
 func (c *SmartOSClient) Connect() error {
@@ -27,41 +27,20 @@ func (c *SmartOSClient) Connect() error {
 		return nil
 	}
 
-	log.Println("Creating client")
-	user, err := user.Current()
-	if err != nil {
-		return err
-	}
-
-	keyPath := path.Join(user.HomeDir, ".ssh", "id_rsa")
-	log.Println("Loading private key from ", keyPath)
-	keyBytes, err := ioutil.ReadFile(keyPath)
-	if err != nil {
-		return err
-	}
-
-	log.Println("Parsing private key")
-	signer, err := ssh.ParsePrivateKey(keyBytes)
-	if err != nil {
-		return err
-	}
-
 	config := &ssh.ClientConfig{
-		User: c.user,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		},
+		User:            c.user,
+		Auth:            c.authMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	log.Println("Connecting to host: ", c.host)
+	log.Println("SSH: Connecting to host: ", c.host)
 	c.client, err = ssh.Dial("tcp", c.host, config)
 	if err != nil {
-		log.Println("Connection failed: ", err.Error())
+		log.Println("SSH: Connection failed: ", err.Error())
 		return err
 	}
 
-	log.Println("Connected successfully")
+	log.Println("SSH: Connected successfully")
 	return nil
 }
 

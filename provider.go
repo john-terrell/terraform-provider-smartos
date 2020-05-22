@@ -1,7 +1,12 @@
 package main
 
 import (
+	"net"
+	"os"
+
 	"github.com/hashicorp/terraform/helper/schema"
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 )
 
 func Provider() *schema.Provider {
@@ -43,9 +48,20 @@ func providerDataSources() map[string]*schema.Resource {
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
+	sshSocket := os.Getenv("SSH_AUTH_SOCK")
+	agentConnection, err := net.Dial("unix", sshSocket)
+	if err != nil {
+		return nil, err
+	}
+
+	authMethods := []ssh.AuthMethod{}
+	authMethods = append(authMethods, ssh.PublicKeysCallback(agent.NewClient(agentConnection).Signers))
+
 	client := SmartOSClient{
-		host: d.Get("host").(string),
-		user: d.Get("user").(string),
+		host:            d.Get("host").(string),
+		user:            d.Get("user").(string),
+		agentConnection: agentConnection,
+		authMethods:     authMethods,
 	}
 
 	return &client, nil
