@@ -79,7 +79,7 @@ func (c *SmartOSClient) CreateMachine(machine *Machine) (*uuid.UUID, error) {
 
 	// Ensure any disk images are imported
 	for _, disk := range machine.Disks {
-		if disk.ImageUUID != nil {
+		if disk.ImageUUID != nil && *disk.ImageUUID != uuid.Nil {
 			err = c.ImportRemoteImage(*disk.ImageUUID)
 			if err != nil {
 				log.Fatalf("Failed to import disk image: %s (Error: %s)", disk.ImageUUID.String(), err.Error())

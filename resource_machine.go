@@ -83,7 +83,7 @@ func resourceMachine() *schema.Resource {
 					Optional: true,
 				},
 			*/
-			"disks": &schema.Schema{
+			"disks": {
 				Type:     schema.TypeList,
 				Optional: true,
 				ForceNew: true,
@@ -101,7 +101,7 @@ func resourceMachine() *schema.Resource {
 						},
 						"image_uuid": &schema.Schema{
 							Type:     schema.TypeString,
-							Required: true,
+							Optional: true,
 							ForceNew: true,
 						},
 						"image_size": &schema.Schema{ // in MiB
@@ -111,6 +111,11 @@ func resourceMachine() *schema.Resource {
 						},
 						"model": &schema.Schema{
 							Type:     schema.TypeString,
+							Optional: true,
+							ForceNew: true,
+						},
+						"size": &schema.Schema{ // in MiB
+							Type:     schema.TypeInt,
 							Optional: true,
 							ForceNew: true,
 						},

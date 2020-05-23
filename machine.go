@@ -267,6 +267,7 @@ type Disk struct {
 	ImageUUID   *uuid.UUID `json:"image_uuid,omitempty"`
 	ImageSize   uint32     `json:"image_size,omitempty"`
 	Model       string     `json:"model,omitempty"`
+	Size        *uint32    `json:"size,omitempty"`
 }
 
 func getDisks(d interface{}) ([]Disk, error) {
@@ -288,7 +289,11 @@ func getDisks(d interface{}) ([]Disk, error) {
 
 		if iid, ok := diskDefinition["image_uuid"]; ok {
 			iid2, _ := uuid.Parse(iid.(string))
-			disk.ImageUUID = &iid2
+			if iid2 != uuid.Nil {
+				disk.ImageUUID = &iid2
+			} else {
+				disk.ImageUUID = nil
+			}
 		}
 
 		if is, ok := diskDefinition["image_size"]; ok {
@@ -297,6 +302,13 @@ func getDisks(d interface{}) ([]Disk, error) {
 
 		if m, ok := diskDefinition["model"]; ok {
 			disk.Model = m.(string)
+		}
+
+		if sz, ok := diskDefinition["size"]; ok {
+			size := uint32(sz.(int))
+			if size > 0 {
+				disk.Size = &size
+			}
 		}
 
 		disks = append(disks, disk)
