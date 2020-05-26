@@ -196,9 +196,11 @@ func stringsAreEqual(a interface{}, b interface{}) bool {
 type NetworkInterface struct {
 	/*
 		AllowDHCPSpoofing     bool     `json:"allow_dhcp_spoofing,omitempty"`
-		AllowIPSpoofing       bool     `json:"allow_ip_spoofing,omitempty"`
-		AllowMACSpoofing      bool     `json:"allow_mac_spoofing,omitempty"`
-		AllowRestrictedTrafic bool     `json:"allow_restricted_traffic,omitempty"`
+	*/
+	AllowIPSpoofing        bool `json:"allow_ip_spoofing"`
+	AllowMACSpoofing       bool `json:"allow_mac_spoofing"`
+	AllowRestrictedTraffic bool `json:"allow_restricted_traffic"`
+	/*
 		BlockedOutgoingPorts  []uint16 `json:"blocked_outgoing_ports,omitempty"`
 	*/
 	Gateways    []string `json:"gateways,omitempty"`
@@ -221,6 +223,21 @@ func getNetworkInterfaces(d interface{}) ([]NetworkInterface, error) {
 
 	for _, nid := range networkInterfaceDefinitions {
 		networkInterfaceDefinition := nid.(map[string]interface{})
+
+		allowRestrictedTraffic := false
+		if value, ok := networkInterfaceDefinition["allow_restricted_traffic"].(bool); ok {
+			allowRestrictedTraffic = value
+		}
+
+		allowIPSpoofing := false
+		if value, ok := networkInterfaceDefinition["allow_ip_spoofing"].(bool); ok {
+			allowIPSpoofing = value
+		}
+
+		allowMACSpoofing := false
+		if value, ok := networkInterfaceDefinition["allow_mac_spoofing"].(bool); ok {
+			allowMACSpoofing = value
+		}
 
 		var gateways []string
 		for _, gateway := range networkInterfaceDefinition["gateways"].([]interface{}) {
@@ -247,12 +264,15 @@ func getNetworkInterfaces(d interface{}) ([]NetworkInterface, error) {
 		}
 
 		networkInterface := NetworkInterface{
-			Interface:    interfaceName,
-			IPAddresses:  ips,
-			Tag:          nicTag,
-			Gateways:     gateways,
-			VirtualLANID: vlanID,
-			Model:        model,
+			AllowRestrictedTraffic: allowRestrictedTraffic,
+			AllowIPSpoofing:        allowIPSpoofing,
+			AllowMACSpoofing:       allowMACSpoofing,
+			Interface:              interfaceName,
+			IPAddresses:            ips,
+			Tag:                    nicTag,
+			Gateways:               gateways,
+			VirtualLANID:           vlanID,
+			Model:                  model,
 		}
 
 		networkInterfaces = append(networkInterfaces, networkInterface)

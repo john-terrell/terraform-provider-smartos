@@ -228,6 +228,21 @@ func resourceMachine() *schema.Resource {
 				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"allow_restricted_traffic": &schema.Schema{
+							Type:     schema.TypeBool,
+							Optional: true,
+							ForceNew: true,
+						},
+						"allow_ip_spoofing": &schema.Schema{
+							Type:     schema.TypeBool,
+							Optional: true,
+							ForceNew: true,
+						},
+						"allow_mac_spoofing": &schema.Schema{
+							Type:     schema.TypeBool,
+							Optional: true,
+							ForceNew: true,
+						},
 						"gateways": &schema.Schema{
 							Type:     schema.TypeList,
 							Optional: true,
@@ -515,6 +530,17 @@ func resourceMachineUpdate(d *schema.ResourceData, m interface{}) error {
 			resolvers = append(resolvers, resolver.(string))
 		}
 		machineUpdate.Resolvers = resolvers
+		updatesRequired = true
+	}
+
+	if d.HasChange("nics") && !d.IsNewResource() {
+		_, newSchemaValue := d.GetChange("nics")
+
+		var nics []NetworkInterface
+		for _, nic := range newSchemaValue.([]interface{}) {
+			nics = append(nics, nic.(NetworkInterface))
+		}
+		machineUpdate.NetworkInterfaces = nics
 		updatesRequired = true
 	}
 
