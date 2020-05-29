@@ -35,12 +35,10 @@ type Machine struct {
 		IndestructableDelegated    bool               `json:"indestructible_delegated,omitempty"`
 		IndestructableZoneRoot     bool               `json:"indestructible_zoneroot,omitempty"`
 	*/
-	KernelVersion     string  `json:"kernel_version,omitempty"`
-	MaintainResolvers *bool   `json:"maintain_resolvers,omitempty"`
-	MaxPhysicalMemory *uint32 `json:"max_physical_memory,omitempty"`
-	/*
-		MaxSwap           uint32             `json:"max_swap,omitempty"`
-	*/
+	KernelVersion     string             `json:"kernel_version,omitempty"`
+	MaintainResolvers *bool              `json:"maintain_resolvers,omitempty"`
+	MaxPhysicalMemory *uint32            `json:"max_physical_memory,omitempty"`
+	MaxSwap           *uint32            `json:"max_swap,omitempty"`
 	NetworkInterfaces []NetworkInterface `json:"nics,omitempty"`
 	Quota             *uint32            `json:"quota,omitempty"`
 	RAM               *uint32            `json:"ram,omitempty"`
@@ -129,6 +127,10 @@ func (m *Machine) LoadFromSchema(d *schema.ResourceData) error {
 
 	if maxPhysicalMemory, ok := d.GetOk("max_physical_memory"); ok {
 		m.MaxPhysicalMemory = newUint32(uint32(maxPhysicalMemory.(int)))
+	}
+
+	if maxSwap, ok := d.GetOk("max_swap"); ok {
+		m.MaxSwap = newUint32(uint32(maxSwap.(int)))
 	}
 
 	if maintainResolvers, ok := d.GetOk("maintain_resolvers"); ok {

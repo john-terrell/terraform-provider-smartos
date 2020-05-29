@@ -212,11 +212,11 @@ func resourceMachine() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
+			"max_swap": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
 			/*
-				"max_swap": &schema.Schema{
-					Type:     schema.TypeInt,
-					Optional: true,
-				},
 				"mdata_exec_timeout": &schema.Schema{
 					Type:     schema.TypeInt,
 					Optional: true,
@@ -512,6 +512,13 @@ func resourceMachineUpdate(d *schema.ResourceData, m interface{}) error {
 		_, newValue := d.GetChange("max_physical_memory")
 
 		machineUpdate.MaxPhysicalMemory = newUint32(uint32(newValue.(int)))
+		updatesRequired = true
+	}
+
+	if d.HasChange("max_swap") && !d.IsNewResource() {
+		_, newValue := d.GetChange("max_swap")
+
+		machineUpdate.MaxSwap = newUint32(uint32(newValue.(int)))
 		updatesRequired = true
 	}
 

@@ -32,6 +32,7 @@ resource "smartos_machine" "illumos" {
     "image_uuid" = "${data.smartos_image.illumos.id}"
     "maintain_resolvers" = true
     "max_physical_memory" = 512
+    "max_swap" = 1024
     "nics" = [
         {
             "nic_tag" = "external"
