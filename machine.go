@@ -22,6 +22,8 @@ type Machine struct {
 
 	Disks []Disk `json:"disks,omitempty"`
 
+	Filesystems []Filesystem `json:"filesystems,omitempty"`
+
 	/*
 		DelegateDataset            bool               `json:"delegate_dataset,omitempty"`
 		DNSDomain                  string             `json:"dns_domain,omitempty"`
@@ -121,6 +123,10 @@ func (m *Machine) LoadFromSchema(d *schema.ResourceData) error {
 
 	if disks, ok := d.GetOk("disks"); ok {
 		m.Disks, _ = getDisks(disks)
+	}
+
+	if filesystems, ok := d.GetOk("filesystems"); ok {
+		m.Filesystems, _ = getFilesystems(filesystems)
 	}
 
 	if kernelVersion, ok := d.GetOk("kernel_version"); ok {
@@ -335,4 +341,49 @@ func getDisks(d interface{}) ([]Disk, error) {
 	}
 
 	return disks, nil
+}
+
+type Filesystem struct {
+	Type    string   `json:"type,omitempty"`
+	Source  string   `json:"source,omitempty"`
+	Target  string   `json:"target,omitempty"`
+	Raw     string   `json:"raw,omitempty"`
+	Options []string `json:"options,omitempty"`
+}
+
+func getFilesystems(d interface{}) ([]Filesystem, error) {
+	filesystemDefinitions := d.([]interface{})
+
+	var filesystems []Filesystem
+
+	for _, fd := range filesystemDefinitions {
+		filesystemDefinition := fd.(map[string]interface{})
+		filesystem := Filesystem{}
+
+		if t, ok := filesystemDefinition["type"]; ok {
+			filesystem.Type = t.(string)
+		}
+
+		if src, ok := filesystemDefinition["source"]; ok {
+			filesystem.Source = src.(string)
+		}
+
+		if tgt, ok := filesystemDefinition["target"]; ok {
+			filesystem.Target = tgt.(string)
+		}
+
+		if r, ok := filesystemDefinition["raw"]; ok {
+			filesystem.Raw = r.(string)
+		}
+
+		var options []string
+		for _, option := range filesystemDefinition["options"].([]interface{}) {
+			options = append(options, option.(string))
+		}
+		filesystem.Options = options
+
+		filesystems = append(filesystems, filesystem)
+	}
+
+	return filesystems, nil
 }
