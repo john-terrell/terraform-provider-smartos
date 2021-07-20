@@ -1,3 +1,10 @@
+NOTE: This provider has been superceded by:
+
+https://github.com/CoolpeopleNetworks/terraform-provider-smartos.git
+
+This repository will no longer be updated.
+
+
 SmartOS Terraform Provider
 =========================
 
